@@ -38,7 +38,7 @@ def before(**kwargs: Any) -> tuple[CollectStatus, str, dict[str, Any]]:
     log.minor_success("Generating the source of the eBPF program")
 
     executable_dir = str(Path.cwd()) + str(kwargs["executable"])[1:]
-    bpfgen.generate_bpf_c(executable_dir, kwargs["symbol_map"], 1024)
+    bpfgen.generate_bpf_c(executable_dir, kwargs["symbol_map"], kwargs["bpfring_size"])
     build_dir = Path(Path(__file__).resolve().parent, "bpf_build")
     commands.run_safely_external_command(f"make -C {build_dir}")
     log.minor_success("Building the eBPF program")
