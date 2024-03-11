@@ -14,10 +14,10 @@ from elftools.elf.elffile import ELFFile
 from distorm3 import Decode, Decode64Bits
 
 # Perun Imports
-# from perun.utils import log
-# from perun.utils.external import commands
+from perun.utils import log
+from perun.utils.external import commands
 
-def get_symbols(traced_file: Path) -> tuple[dict[str, list[str]], dict[int, str]]:
+def get_symbols(traced_file: Path) -> tuple[dict[int, str], dict[str, list[str]]]:
     f = open(traced_file, 'rb')
     e = ELFFile(f)
 
@@ -61,4 +61,4 @@ def get_symbols(traced_file: Path) -> tuple[dict[str, list[str]], dict[int, str]
 
     idx_name_map = {i: name for i, (name, _) in enumerate(symbol_map.items())}
 
-    return symbol_map, idx_name_map
+    return idx_name_map, symbol_map

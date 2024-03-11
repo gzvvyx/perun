@@ -16,6 +16,7 @@ struct {
 
 
 {% for func_name, offsets in symbols.items() %}
+{% set func_id = loop.index0 %}
 // Entry of {{ func_name }}
 SEC("uprobe//{{ path }}:{{ func_name }}")
 int BPF_UPROBE({{ func_name|replace(".", "_") }}_entry) {
@@ -36,7 +37,7 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_entry) {
 	evt->tgid = tgid;
 	evt->pid = pid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = {{ loop.index0 }};
+	evt->func = {{ func_id }};
 
 	bpf_ringbuf_submit(evt, 0);
 	
@@ -65,7 +66,7 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_leave_{{ loop.index0 }})
 	evt->tgid = tgid;
 	evt->pid = pid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = {{ loop.index0 }};
+	evt->func = {{ func_id }};
 
 	bpf_ringbuf_submit(evt, 0);
 	

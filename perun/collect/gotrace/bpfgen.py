@@ -22,8 +22,7 @@ def generate_bpf_c(path: str, symbol_map: dict[str, list[str]], ring_size: int) 
     :param symbol_map: map of functions to custom indexes for storing data
     :param ring_size: size of the ring buffer in the eBPF program
     """
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader("templates/"))
-    # env = jinja2.Environment(loader=jinja2.PackageLoader("perun.collect.gotrace", "templates/"))
+    env = jinja2.Environment(loader=jinja2.PackageLoader("perun.collect.gotrace", "templates/"))
     bpf_template = env.get_template("bpf_template_go_uprobes.c")
     content = bpf_template.render(
         bpfring_size=ring_size,

@@ -13,7 +13,7 @@ import struct
 import pandas as pd
 
 # Perun Imports
-# from perun.utils import log
+from perun.utils import log
 
 
 
@@ -25,10 +25,30 @@ NS_TO_MS = 1000000
 DataT = TypeVar("DataT", bound="FuncData")
 
 
+
 class FuncData(ABC):
     @abstractmethod
     def update(self, inclusive_t: int, exclusive_t: int, callees_cnt: int) -> None:
         ...
+
+
+
+
+class FuncDataDetails(FuncData):
+    __slots__ = "inclusive_time", "exclusive_time", "callees_count"
+
+    def __init__(self) -> None:
+        self.inclusive_time: list[int] = []
+        self.exclusive_time: list[int] = []
+        self.callees_count: int = 0
+
+    def update(self, inclusive_t: int, exclusive_t: int, callees_cnt: int) -> None:
+        self.inclusive_time.append(inclusive_t)
+        self.exclusive_time.append(exclusive_t)
+        self.callees_count += callees_cnt
+
+
+
 
 class FuncDataFlat(FuncData):
     __slots__ = [
@@ -67,6 +87,9 @@ class FuncDataFlat(FuncData):
         self.incl_t_max = max(self.incl_t_max, inclusive_t)
         self.excl_t_max = max(self.excl_t_max, exclusive_t)
 
+
+
+
 class TraceContextsMap(Generic[DataT]):
     __slots__ = "idx_name_map", "data_t", "durations", "total_runtime"
 
@@ -94,6 +117,8 @@ class TraceContextsMap(Generic[DataT]):
             )
 
 
+
+
 class TraceRecord:
     __slots__ = "func_id", "timestamp", "callees", "callees_time"
 
@@ -102,6 +127,7 @@ class TraceRecord:
         self.timestamp: int = timestamp
         self.callees: int = 0
         self.callees_time: int = 0
+
 
 
 
@@ -141,8 +167,6 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
             
             if (duration := ts - top_record.timestamp) < 0:
                 print("corrupted log")
-            # Obtain the trace from the stack
-            # trace = tuple(record.func_id for record in record_stack if record.func_id != -1)
             # Update the exclusive time of the parent call
             record_stack[-1].callees += 1
             record_stack[-1].callees_time += duration
@@ -156,6 +180,8 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
             # print(func_map[top_record.func_id], "inc:", duration / NS_TO_MS, "ms", "excl", duration - top_record.callees_time / NS_TO_MS, "ms", "callees:", top_record.callees)
         trace_contexts.total_runtime = ts - trace_contexts.total_runtime
     return trace_contexts
+
+
 
 
 def traces_flat_to_pandas(trace_contexts: TraceContextsMap[FuncDataFlat]) -> pd.DataFrame:
@@ -200,3 +226,31 @@ def traces_flat_to_pandas(trace_contexts: TraceContextsMap[FuncDataFlat]) -> pd.
     )
     df.sort_values(by=["Total Exclusive T [%]"], inplace=True, ascending=False)
     return df
+
+
+
+
+def pandas_to_resources(df: pd.DataFrame) -> list[dict[str, Any]]:
+    """Transforms pandas dataframe to list of resources
+
+    :param df: pandas dataframe
+    :return: list of resources
+    """
+    resources = []
+    for _, row in df.iterrows():
+        function = row["Function"]
+        ncalls = row["Calls [#]"]
+
+        for col in df.columns:
+            if col in ("Function", "Calls [#]"):
+                continue
+            resources.append(
+                {
+                    "amount": row[col],
+                    "uid": function,
+                    "ncalls": ncalls,
+                    "type": "time",
+                    "subtype": col,
+                }
+            )
+    return resources

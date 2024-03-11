@@ -18,7 +18,7 @@ struct {
 
 
 // Entry of main.getCurrentCPUID
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.getCurrentCPUID")
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.getCurrentCPUID")
 int BPF_UPROBE(main_getCurrentCPUID_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -47,7 +47,7 @@ int BPF_UPROBE(main_getCurrentCPUID_entry) {
 
 
 // Exit of main.getCurrentCPUID with offset 0x8c
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.getCurrentCPUID+0x8c")
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.getCurrentCPUID+0x8c")
 int BPF_UPROBE(main_getCurrentCPUID_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -77,7 +77,7 @@ int BPF_UPROBE(main_getCurrentCPUID_leave_0)
 
 
 // Entry of main.getGoroutineID
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.getGoroutineID")
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.getGoroutineID")
 int BPF_UPROBE(main_getGoroutineID_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -106,7 +106,7 @@ int BPF_UPROBE(main_getGoroutineID_entry) {
 
 
 // Exit of main.getGoroutineID with offset 0x172
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.getGoroutineID+0x172")
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.getGoroutineID+0x172")
 int BPF_UPROBE(main_getGoroutineID_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -135,9 +135,9 @@ int BPF_UPROBE(main_getGoroutineID_leave_0)
 
 
 
-// Entry of main.recursiveFunction
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.recursiveFunction")
-int BPF_UPROBE(main_recursiveFunction_entry) {
+// Entry of main.Greet
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.Greet")
+int BPF_UPROBE(main_Greet_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
@@ -159,14 +159,14 @@ int BPF_UPROBE(main_recursiveFunction_entry) {
 
 	bpf_ringbuf_submit(evt, 0);
 	
-	bpf_printk("main.recursiveFunction entry");
+	bpf_printk("main.Greet entry");
 	return 0;
 }
 
 
-// Exit of main.recursiveFunction with offset 0x78
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.recursiveFunction+0x78")
-int BPF_UPROBE(main_recursiveFunction_leave_0)
+// Exit of main.Greet with offset 0x8f
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.Greet+0x8f")
+int BPF_UPROBE(main_Greet_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
@@ -188,13 +188,44 @@ int BPF_UPROBE(main_recursiveFunction_leave_0)
 
 	bpf_ringbuf_submit(evt, 0);
 	
-	bpf_printk("main.recursiveFunction leave 0");
+	bpf_printk("main.Greet leave 0");
 	return 0;
 }
 
-// Exit of main.recursiveFunction with offset 0x259
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.recursiveFunction+0x259")
-int BPF_UPROBE(main_recursiveFunction_leave_1)
+
+
+// Entry of main.getThreadID
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.getThreadID")
+int BPF_UPROBE(main_getThreadID_entry) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 3;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.getThreadID entry");
+	return 0;
+}
+
+
+// Exit of main.getThreadID with offset 0x41
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.getThreadID+0x41")
+int BPF_UPROBE(main_getThreadID_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
@@ -212,18 +243,105 @@ int BPF_UPROBE(main_recursiveFunction_leave_1)
 	evt->tgid = tgid;
 	evt->pid = pid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = 2;
+	evt->func = 3;
 
 	bpf_ringbuf_submit(evt, 0);
 	
-	bpf_printk("main.recursiveFunction leave 1");
+	bpf_printk("main.getThreadID leave 0");
+	return 0;
+}
+
+
+
+// Entry of main.add
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.add")
+int BPF_UPROBE(main_add_entry) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 4;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.add entry");
+	return 0;
+}
+
+
+// Exit of main.add with offset 0x67
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.add+0x67")
+int BPF_UPROBE(main_add_leave_0)
+{
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 1;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 4;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.add leave 0");
+	return 0;
+}
+
+// Exit of main.add with offset 0x75
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.add+0x75")
+int BPF_UPROBE(main_add_leave_1)
+{
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 1;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 4;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.add leave 1");
 	return 0;
 }
 
 
 
 // Entry of main.main
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.main")
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.main")
 int BPF_UPROBE(main_main_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -242,7 +360,7 @@ int BPF_UPROBE(main_main_entry) {
 	evt->tgid = tgid;
 	evt->pid = pid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = 3;
+	evt->func = 5;
 
 	bpf_ringbuf_submit(evt, 0);
 	
@@ -251,8 +369,8 @@ int BPF_UPROBE(main_main_entry) {
 }
 
 
-// Exit of main.main with offset 0x1a
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.main+0x1a")
+// Exit of main.main with offset 0x3b7
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.main+0x3b7")
 int BPF_UPROBE(main_main_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -271,11 +389,70 @@ int BPF_UPROBE(main_main_leave_0)
 	evt->tgid = tgid;
 	evt->pid = pid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = 3;
+	evt->func = 5;
 
 	bpf_ringbuf_submit(evt, 0);
 	
 	bpf_printk("main.main leave 0");
+	return 0;
+}
+
+
+
+// Entry of main.main.func1
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.main.func1")
+int BPF_UPROBE(main_main_func1_entry) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 6;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.main.func1 entry");
+	return 0;
+}
+
+
+// Exit of main.main.func1 with offset 0xb1
+SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.main.func1+0xb1")
+int BPF_UPROBE(main_main_func1_leave_0)
+{
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 1;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 6;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.main.func1 leave 0");
 	return 0;
 }
 
