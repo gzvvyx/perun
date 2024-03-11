@@ -1,14 +1,13 @@
-#ifndef __GOTRACE_H__
-#define __GOTRACE_H__
+#ifndef __UPROBE_H__
+#define __UPROBE_H__
 
 struct basic_info {
-    char func[32];
+    int func;
     bool type; // 0 entry, 1 leave
 	int pid;
 	int tgid;
     int64_t goid;
-
-    uint64_t time;
+    uint64_t ts;
 };
 
 struct stack {
@@ -45,4 +44,4 @@ struct g {
 };
 
 
-#endif // __GOTRACE_H__
+#endif // __UPROBE_H__
