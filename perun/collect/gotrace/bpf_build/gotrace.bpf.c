@@ -11,14 +11,14 @@ char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
 struct {
 	__uint(type, BPF_MAP_TYPE_RINGBUF);
-	__uint(max_entries, 1024);
+	__uint(max_entries, 167772160);
 } rb SEC(".maps");
 
 
 
 
 // Entry of main.getCurrentCPUID
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.getCurrentCPUID")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getCurrentCPUID")
 int BPF_UPROBE(main_getCurrentCPUID_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -47,7 +47,7 @@ int BPF_UPROBE(main_getCurrentCPUID_entry) {
 
 
 // Exit of main.getCurrentCPUID with offset 0x8c
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.getCurrentCPUID+0x8c")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getCurrentCPUID+0x8c")
 int BPF_UPROBE(main_getCurrentCPUID_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -74,10 +74,37 @@ int BPF_UPROBE(main_getCurrentCPUID_leave_0)
 	return 0;
 }
 
+// Morestack of main.getCurrentCPUID
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getCurrentCPUID+0x93")
+int BPF_UPROBE(main_getCurrentCPUID_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 2;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 0;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.getCurrentCPUID morestack");
+	return 0;
+}
 
 
 // Entry of main.getGoroutineID
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.getGoroutineID")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getGoroutineID")
 int BPF_UPROBE(main_getGoroutineID_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -106,7 +133,7 @@ int BPF_UPROBE(main_getGoroutineID_entry) {
 
 
 // Exit of main.getGoroutineID with offset 0x172
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.getGoroutineID+0x172")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getGoroutineID+0x172")
 int BPF_UPROBE(main_getGoroutineID_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -133,10 +160,37 @@ int BPF_UPROBE(main_getGoroutineID_leave_0)
 	return 0;
 }
 
+// Morestack of main.getGoroutineID
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getGoroutineID+0x173")
+int BPF_UPROBE(main_getGoroutineID_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 2;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 1;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.getGoroutineID morestack");
+	return 0;
+}
 
 
 // Entry of main.Greet
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.Greet")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.Greet")
 int BPF_UPROBE(main_Greet_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -165,7 +219,7 @@ int BPF_UPROBE(main_Greet_entry) {
 
 
 // Exit of main.Greet with offset 0x8f
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.Greet+0x8f")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.Greet+0x8f")
 int BPF_UPROBE(main_Greet_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -192,10 +246,37 @@ int BPF_UPROBE(main_Greet_leave_0)
 	return 0;
 }
 
+// Morestack of main.Greet
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.Greet+0x90")
+int BPF_UPROBE(main_Greet_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 2;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 2;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.Greet morestack");
+	return 0;
+}
 
 
 // Entry of main.getThreadID
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.getThreadID")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getThreadID")
 int BPF_UPROBE(main_getThreadID_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -224,7 +305,7 @@ int BPF_UPROBE(main_getThreadID_entry) {
 
 
 // Exit of main.getThreadID with offset 0x41
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.getThreadID+0x41")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getThreadID+0x41")
 int BPF_UPROBE(main_getThreadID_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -251,10 +332,37 @@ int BPF_UPROBE(main_getThreadID_leave_0)
 	return 0;
 }
 
+// Morestack of main.getThreadID
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getThreadID+0x42")
+int BPF_UPROBE(main_getThreadID_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 2;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 3;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.getThreadID morestack");
+	return 0;
+}
 
 
 // Entry of main.add
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.add")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add")
 int BPF_UPROBE(main_add_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -283,7 +391,7 @@ int BPF_UPROBE(main_add_entry) {
 
 
 // Exit of main.add with offset 0x67
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.add+0x67")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add+0x67")
 int BPF_UPROBE(main_add_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -311,7 +419,7 @@ int BPF_UPROBE(main_add_leave_0)
 }
 
 // Exit of main.add with offset 0x75
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.add+0x75")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add+0x75")
 int BPF_UPROBE(main_add_leave_1)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -338,10 +446,37 @@ int BPF_UPROBE(main_add_leave_1)
 	return 0;
 }
 
+// Morestack of main.add
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add+0xa3")
+int BPF_UPROBE(main_add_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 2;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 4;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.add morestack");
+	return 0;
+}
 
 
 // Entry of main.main
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.main")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main")
 int BPF_UPROBE(main_main_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -370,7 +505,7 @@ int BPF_UPROBE(main_main_entry) {
 
 
 // Exit of main.main with offset 0x3b7
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.main+0x3b7")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main+0x3b7")
 int BPF_UPROBE(main_main_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -397,10 +532,37 @@ int BPF_UPROBE(main_main_leave_0)
 	return 0;
 }
 
+// Morestack of main.main
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main+0x3b8")
+int BPF_UPROBE(main_main_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 2;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 5;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.main morestack");
+	return 0;
+}
 
 
 // Entry of main.main.func1
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.main.func1")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func1")
 int BPF_UPROBE(main_main_func1_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -429,7 +591,7 @@ int BPF_UPROBE(main_main_func1_entry) {
 
 
 // Exit of main.main.func1 with offset 0xb1
-SEC("uprobe///home/gzvv/Desktop/bp/10hello/server:main.main.func1+0xb1")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func1+0xb1")
 int BPF_UPROBE(main_main_func1_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -456,5 +618,32 @@ int BPF_UPROBE(main_main_func1_leave_0)
 	return 0;
 }
 
+// Morestack of main.main.func1
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func1+0xb8")
+int BPF_UPROBE(main_main_func1_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 2;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 6;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.main.func1 morestack");
+	return 0;
+}
 
 

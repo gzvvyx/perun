@@ -15,7 +15,7 @@ struct {
 } rb SEC(".maps");
 
 
-{% for func_name, offsets in symbols.items() %}
+{% for func_name, (offsets, morestack) in symbols.items() %}
 {% set func_id = loop.index0 %}
 // Entry of {{ func_name }}
 SEC("uprobe//{{ path }}:{{ func_name }}")
@@ -74,6 +74,33 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_leave_{{ loop.index0 }})
 	return 0;
 }
 {% endfor %}
+// Morestack of {{ func_name }}
+SEC("uprobe//{{ path }}:{{ func_name }}+{{ morestack }}")
+int BPF_UPROBE({{ func_name|replace(".", "_") }}_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 2;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = {{ func_id }};
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("{{ func_name }} morestack");
+	return 0;
+}
 {% endfor %}
 
 

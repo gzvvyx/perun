@@ -12,7 +12,7 @@ import jinja2
 # Perun Imports
 
 
-def generate_bpf_c(path: str, symbol_map: dict[str, list[str]], ring_size: int) -> None:
+def generate_bpf_c(path: str, symbol_map: dict[str, list[str], str], ring_size: int) -> None:
     """Generates eBPF program for given command, symbol map and ring size
 
     Increasing ring size, will lead to higher memory usage,

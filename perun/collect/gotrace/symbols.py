@@ -22,16 +22,23 @@ def get_symbols(traced_file: Path) -> tuple[dict[int, str], dict[str, list[str]]
     e = ELFFile(f)
 
     functions = []
+    morestack_noctxt_addr = ""
+    morestack_addr = ""
 
     # find user declared functions
-    for sec in e.iter_sections():
-        if sec.name == '.symtab':
-            for sym in sec.iter_symbols():
-                # "main" signals package -- should add param for all packages
-                # "main.." added in go 1.22 as comments
-                if sym.name.startswith('main.') and not sym.name.startswith('main..'):
-                    # found user declared function
-                    functions.append((sym.name, sym['st_value'], sym['st_size']))
+    sec = e.get_section_by_name('.symtab')
+    for sym in sec.iter_symbols():
+        # "main" signals package -- should add param for all packages
+        if sym["st_shndx"] == 1 and sym["st_info"].type == "STT_FUNC":
+            if sym.name.startswith("type:"):
+                continue
+            if sym.name == "runtime.morestack_noctxt.abi0":
+                morestack_noctxt_addr = sym["st_value"]
+            if sym.name == "runtime.morestack.abi0":
+                morestack_addr = sym["st_value"]
+            if sym.name.startswith("main."):
+                # found functions in main package
+                functions.append((sym.name, sym["st_value"], sym["st_size"]))
 
     if not functions:
         raise ValueError('No main functions found in .symtab')
@@ -52,12 +59,15 @@ def get_symbols(traced_file: Path) -> tuple[dict[int, str], dict[str, list[str]]
         f.seek(sec_offset + func[1] - sec_addr)
 
         offsets = []
+        morestack_offset = ""
         instructions = Decode(func[1], f.read(func[2]), type=Decode64Bits)
         for addr, _, asm, _ in instructions:
             if asm == 'RET':
                 offsets.append(hex(addr - func[1]))
+            if asm == f"CALL {hex(morestack_addr)}" or asm == f"CALL {hex(morestack_noctxt_addr)}":
+                morestack_offset = hex(addr - func[1])
 
-        symbol_map[func[0]] = offsets
+        symbol_map[func[0]] = (offsets, morestack_offset)
 
     idx_name_map = {i: name for i, (name, _) in enumerate(symbol_map.items())}
 

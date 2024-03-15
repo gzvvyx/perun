@@ -3,7 +3,7 @@
 
 struct basic_info {
     int func;
-    bool type; // 0 entry, 1 leave
+    int type; // 0 entry, 1 leave, 2 morestack
 	int pid;
 	int tgid;
     int64_t goid;
