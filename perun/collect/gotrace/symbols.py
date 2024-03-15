@@ -17,7 +17,7 @@ from distorm3 import Decode, Decode64Bits
 from perun.utils import log
 from perun.utils.external import commands
 
-def get_symbols(traced_file: Path) -> tuple[dict[int, str], dict[str, list[str]]]:
+def get_symbols(traced_file: Path, packages: List[str]) -> tuple[dict[int, str], dict[str, list[str]]]:
     f = open(traced_file, 'rb')
     e = ELFFile(f)
 
@@ -36,12 +36,13 @@ def get_symbols(traced_file: Path) -> tuple[dict[int, str], dict[str, list[str]]
                 morestack_noctxt_addr = sym["st_value"]
             if sym.name == "runtime.morestack.abi0":
                 morestack_addr = sym["st_value"]
-            if sym.name.startswith("main."):
-                # found functions in main package
-                functions.append((sym.name, sym["st_value"], sym["st_size"]))
+            # find functions to profile in given packages
+            for package in packages:
+                if sym.name.startswith(package):
+                    functions.append((sym.name, sym["st_value"], sym["st_size"]))
 
     if not functions:
-        raise ValueError('No main functions found in .symtab')
+        log.error(f"no functions in executable in packages {packages}")
     
     symbol_map = {}
 

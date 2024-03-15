@@ -27,13 +27,16 @@ def before(**kwargs: Any) -> tuple[CollectStatus, str, dict[str, Any]]:
     """In before function we collect available symbols, filter them and prepare the eBPF program"""
     log.major_info("Creating the profiling program")
 
-    log.minor_info("Discovering available and attachable symbols")
     if kwargs["executable"] is None:
             log.error(
                 "cannot collect perf events without executable. Run collection again with `-c cmd`."
             )
+    if not kwargs["packages"]:
+        kwargs["packages"] = ("main",)
+        log.minor_info("No packages given, defaulting to only main package")
+    log.minor_info(f"Discovering available and attachable symbols for {kwargs['packages']} packages")
 
-    kwargs["idx_to_func"], kwargs["symbol_map"] = symbols.get_symbols(str(kwargs["executable"]))
+    kwargs["idx_to_func"], kwargs["symbol_map"] = symbols.get_symbols(str(kwargs["executable"]), kwargs["packages"])
 
     log.minor_success("Generating the source of the eBPF program")
 
@@ -148,15 +151,13 @@ def after(**kwargs: Any) -> tuple[CollectStatus, str, dict[str, Any]]:
     kwargs["profile"] = {"global": {"time": total_runtime, "resources": resources}}
     return CollectStatus.OK, "", dict(kwargs)
 
+# delete .output?, output file?, gotrace.bpf.c?
 # def teardown():
-# delete .output?
-# delete output file?
-# delete gotrace.bpf.c?
 #     pass
 
 
 @click.command()
-# @click.argument("cmd-names", required=True, nargs=-1)
+@click.argument("packages", required=False, nargs=-1)
 @click.option(
     "--with-sudo",
     "-ws",
