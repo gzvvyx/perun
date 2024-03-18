@@ -9,6 +9,8 @@
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
+#define GO_ID(x) ((x)->di)
+
 struct {
 	__uint(type, BPF_MAP_TYPE_RINGBUF);
 	__uint(max_entries, 167772160);
@@ -16,14 +18,30 @@ struct {
 
 
 
-
-// Entry of main.getGoroutineID
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.getGoroutineID")
-int BPF_UPROBE(main_getGoroutineID_entry) {
+// Entry of main.getCurrentCPUID
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getCurrentCPUID")
+int BPF_UPROBE(main_getCurrentCPUID_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
 
 	struct basic_info *evt = {0};
 
@@ -34,10 +52,155 @@ int BPF_UPROBE(main_getGoroutineID_entry) {
 	}
 
 	evt->type = 0;
+	evt->morestack = 0;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
 	evt->func = 0;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.getCurrentCPUID entry");
+	return 0;
+}
+
+
+// Exit of main.getCurrentCPUID with offset 0x8c
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getCurrentCPUID+0x8c")
+int BPF_UPROBE(main_getCurrentCPUID_leave_0)
+{
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 1;
+	evt->morestack = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 0;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.getCurrentCPUID leave 0");
+	return 0;
+}
+
+// Morestack of main.getCurrentCPUID
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getCurrentCPUID+0x93")
+int BPF_UPROBE(main_getCurrentCPUID_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 (18*uint_64 + 2*uint32_t) from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->morestack = 1;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 0;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.getCurrentCPUID morestack");
+	return 0;
+}
+
+
+// Entry of main.getGoroutineID
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getGoroutineID")
+int BPF_UPROBE(main_getGoroutineID_entry) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->morestack = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 1;
 
 	bpf_ringbuf_submit(evt, 0);
 	
@@ -47,12 +210,29 @@ int BPF_UPROBE(main_getGoroutineID_entry) {
 
 
 // Exit of main.getGoroutineID with offset 0x172
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.getGoroutineID+0x172")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getGoroutineID+0x172")
 int BPF_UPROBE(main_getGoroutineID_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
 
 	struct basic_info *evt = {0};
 
@@ -63,10 +243,12 @@ int BPF_UPROBE(main_getGoroutineID_leave_0)
 	}
 
 	evt->type = 1;
+	evt->morestack = 0;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = 0;
+	evt->func = 1;
 
 	bpf_ringbuf_submit(evt, 0);
 	
@@ -75,12 +257,29 @@ int BPF_UPROBE(main_getGoroutineID_leave_0)
 }
 
 // Morestack of main.getGoroutineID
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.getGoroutineID+0x173")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getGoroutineID+0x173")
 int BPF_UPROBE(main_getGoroutineID_morestack) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 (18*uint_64 + 2*uint32_t) from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
 
 	struct basic_info *evt = {0};
 
@@ -90,11 +289,13 @@ int BPF_UPROBE(main_getGoroutineID_morestack) {
 		return 0;
 	}
 
-	evt->type = 2;
+	evt->type = 0;
+	evt->morestack = 1;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = 0;
+	evt->func = 1;
 
 	bpf_ringbuf_submit(evt, 0);
 	
@@ -103,13 +304,30 @@ int BPF_UPROBE(main_getGoroutineID_morestack) {
 }
 
 
-// Entry of main.recursiveFunction
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.recursiveFunction")
-int BPF_UPROBE(main_recursiveFunction_entry) {
+// Entry of main.Greet
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.Greet")
+int BPF_UPROBE(main_Greet_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
 
 	struct basic_info *evt = {0};
 
@@ -120,25 +338,44 @@ int BPF_UPROBE(main_recursiveFunction_entry) {
 	}
 
 	evt->type = 0;
+	evt->morestack = 0;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = 1;
+	evt->func = 2;
 
 	bpf_ringbuf_submit(evt, 0);
 	
-	bpf_printk("main.recursiveFunction entry");
+	bpf_printk("main.Greet entry");
 	return 0;
 }
 
 
-// Exit of main.recursiveFunction with offset 0x78
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.recursiveFunction+0x78")
-int BPF_UPROBE(main_recursiveFunction_leave_0)
+// Exit of main.Greet with offset 0x8f
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.Greet+0x8f")
+int BPF_UPROBE(main_Greet_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
 
 	struct basic_info *evt = {0};
 
@@ -149,24 +386,139 @@ int BPF_UPROBE(main_recursiveFunction_leave_0)
 	}
 
 	evt->type = 1;
+	evt->morestack = 0;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = 1;
+	evt->func = 2;
 
 	bpf_ringbuf_submit(evt, 0);
 	
-	bpf_printk("main.recursiveFunction leave 0");
+	bpf_printk("main.Greet leave 0");
 	return 0;
 }
 
-// Exit of main.recursiveFunction with offset 0x1ad
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.recursiveFunction+0x1ad")
-int BPF_UPROBE(main_recursiveFunction_leave_1)
+// Morestack of main.Greet
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.Greet+0x90")
+int BPF_UPROBE(main_Greet_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 (18*uint_64 + 2*uint32_t) from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->morestack = 1;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 2;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.Greet morestack");
+	return 0;
+}
+
+
+// Entry of main.getThreadID
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getThreadID")
+int BPF_UPROBE(main_getThreadID_entry) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->morestack = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 3;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.getThreadID entry");
+	return 0;
+}
+
+
+// Exit of main.getThreadID with offset 0x41
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getThreadID+0x41")
+int BPF_UPROBE(main_getThreadID_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
 
 	struct basic_info *evt = {0};
 
@@ -177,24 +529,43 @@ int BPF_UPROBE(main_recursiveFunction_leave_1)
 	}
 
 	evt->type = 1;
+	evt->morestack = 0;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = 1;
+	evt->func = 3;
 
 	bpf_ringbuf_submit(evt, 0);
 	
-	bpf_printk("main.recursiveFunction leave 1");
+	bpf_printk("main.getThreadID leave 0");
 	return 0;
 }
 
-// Morestack of main.recursiveFunction
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.recursiveFunction+0x1b3")
-int BPF_UPROBE(main_recursiveFunction_morestack) {
+// Morestack of main.getThreadID
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.getThreadID+0x42")
+int BPF_UPROBE(main_getThreadID_morestack) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 (18*uint_64 + 2*uint32_t) from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
 
 	struct basic_info *evt = {0};
 
@@ -204,27 +575,236 @@ int BPF_UPROBE(main_recursiveFunction_morestack) {
 		return 0;
 	}
 
-	evt->type = 2;
+	evt->type = 0;
+	evt->morestack = 1;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = 1;
+	evt->func = 3;
 
 	bpf_ringbuf_submit(evt, 0);
 	
-	bpf_printk("main.recursiveFunction morestack");
+	bpf_printk("main.getThreadID morestack");
+	return 0;
+}
+
+
+// Entry of main.add
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add")
+int BPF_UPROBE(main_add_entry) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->morestack = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 4;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.add entry");
+	return 0;
+}
+
+
+// Exit of main.add with offset 0x67
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add+0x67")
+int BPF_UPROBE(main_add_leave_0)
+{
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 1;
+	evt->morestack = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 4;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.add leave 0");
+	return 0;
+}
+
+// Exit of main.add with offset 0x75
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add+0x75")
+int BPF_UPROBE(main_add_leave_1)
+{
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 1;
+	evt->morestack = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 4;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.add leave 1");
+	return 0;
+}
+
+// Morestack of main.add
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add+0xa3")
+int BPF_UPROBE(main_add_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 (18*uint_64 + 2*uint32_t) from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->morestack = 1;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 4;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.add morestack");
 	return 0;
 }
 
 
 // Entry of main.main
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.main")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main")
 int BPF_UPROBE(main_main_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
 
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
 	struct basic_info *evt = {0};
 
 	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
@@ -234,10 +814,12 @@ int BPF_UPROBE(main_main_entry) {
 	}
 
 	evt->type = 0;
+	evt->morestack = 0;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = 2;
+	evt->func = 5;
 
 	bpf_ringbuf_submit(evt, 0);
 	
@@ -246,13 +828,30 @@ int BPF_UPROBE(main_main_entry) {
 }
 
 
-// Exit of main.main with offset 0xaa
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.main+0xaa")
+// Exit of main.main with offset 0x3b7
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main+0x3b7")
 int BPF_UPROBE(main_main_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
 
 	struct basic_info *evt = {0};
 
@@ -263,10 +862,12 @@ int BPF_UPROBE(main_main_leave_0)
 	}
 
 	evt->type = 1;
+	evt->morestack = 0;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = 2;
+	evt->func = 5;
 
 	bpf_ringbuf_submit(evt, 0);
 	
@@ -275,12 +876,29 @@ int BPF_UPROBE(main_main_leave_0)
 }
 
 // Morestack of main.main
-SEC("uprobe///home/gzvv/Desktop/bp/simple_recursion/simple_recursion:main.main+0xab")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main+0x3b8")
 int BPF_UPROBE(main_main_morestack) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 (18*uint_64 + 2*uint32_t) from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
 
 	struct basic_info *evt = {0};
 
@@ -290,15 +908,160 @@ int BPF_UPROBE(main_main_morestack) {
 		return 0;
 	}
 
-	evt->type = 2;
+	evt->type = 0;
+	evt->morestack = 1;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
-	evt->func = 2;
+	evt->func = 5;
 
 	bpf_ringbuf_submit(evt, 0);
 	
 	bpf_printk("main.main morestack");
+	return 0;
+}
+
+
+// Entry of main.main.func1
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func1")
+int BPF_UPROBE(main_main_func1_entry) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->morestack = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 6;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.main.func1 entry");
+	return 0;
+}
+
+
+// Exit of main.main.func1 with offset 0xb1
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func1+0xb1")
+int BPF_UPROBE(main_main_func1_leave_0)
+{
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 1;
+	evt->morestack = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 6;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.main.func1 leave 0");
+	return 0;
+}
+
+// Morestack of main.main.func1
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func1+0xb8")
+int BPF_UPROBE(main_main_func1_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 (18*uint_64 + 2*uint32_t) from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->morestack = 1;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 6;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.main.func1 morestack");
 	return 0;
 }
 

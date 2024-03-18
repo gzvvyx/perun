@@ -41,10 +41,9 @@ static int handle_event(void *ctx, void *data, size_t data_sz)
 	const struct basic_info *e = data;
 	FILE *out = (FILE *)ctx;
 	// fwrite(e, sizeof(e), 1, out);
-	// fID;TYPE;PID;TGID;GOID;TIMESTAMP
-	fprintf(out, "%d;%d;%d;%d;%d;%" PRIu64 "\n", e->func, e->type, e->pid, e->tgid, 0, e->ts);
+	// fID;TYPE;MORESTACK;PID;TGID;GOID;TIMESTAMP
+	fprintf(out, "%u;%d;%d;%u;%u;%llu;%llu\n", e->func, e->type, e->morestack, e->pid, e->tgid, e->goid, e->ts);
 
-	// fprintf(stdout, "FUNC: %d, PID: %d, TGID: %d, GOID: %ld, TIME: %" PRIu64 "\n", evt->func, evt->pid, evt->tgid, evt->goid, evt->time);
 	return 0;
 }
 

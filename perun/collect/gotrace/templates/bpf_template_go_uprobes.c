@@ -9,11 +9,12 @@
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
+#define GO_ID(x) ((x)->di)
+
 struct {
 	__uint(type, BPF_MAP_TYPE_RINGBUF);
 	__uint(max_entries, {{ bpfring_size }});
 } rb SEC(".maps");
-
 
 {% for func_name, (offsets, morestack) in symbols.items() %}
 {% set func_id = loop.index0 %}
@@ -25,6 +26,23 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_entry) {
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
 
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
 	struct basic_info *evt = {0};
 
 	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
@@ -34,8 +52,10 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_entry) {
 	}
 
 	evt->type = 0;
+	evt->morestack = 0;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
 	evt->func = {{ func_id }};
 
@@ -54,6 +74,23 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_leave_{{ loop.index0 }})
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
 
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
 	struct basic_info *evt = {0};
 
 	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
@@ -63,8 +100,10 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_leave_{{ loop.index0 }})
 	}
 
 	evt->type = 1;
+	evt->morestack = 0;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
 	evt->func = {{ func_id }};
 
@@ -82,6 +121,23 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_morestack) {
 	u32 pid = tgid_pid >> 32;
 	u32 tgid = tgid_pid;
 
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 (18*uint_64 + 2*uint32_t) from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
 	struct basic_info *evt = {0};
 
 	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
@@ -90,9 +146,11 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_morestack) {
 		return 0;
 	}
 
-	evt->type = 2;
+	evt->type = 0;
+	evt->morestack = 1;
 	evt->tgid = tgid;
 	evt->pid = pid;
+	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
 	evt->func = {{ func_id }};
 

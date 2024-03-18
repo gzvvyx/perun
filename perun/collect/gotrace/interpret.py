@@ -35,17 +35,19 @@ class FuncData(ABC):
 
 
 class FuncDataDetails(FuncData):
-    __slots__ = "inclusive_time", "exclusive_time", "callees_count"
+    __slots__ = "inclusive_time", "exclusive_time", "callees_count", "morestack_time"
 
     def __init__(self) -> None:
         self.inclusive_time: list[int] = []
         self.exclusive_time: list[int] = []
         self.callees_count: int = 0
+        self.morestack_time: list[int] = []
 
-    def update(self, inclusive_t: int, exclusive_t: int, callees_cnt: int) -> None:
+    def update(self, inclusive_t: int, exclusive_t: int, callees_cnt: int, morestack_t: int) -> None:
         self.inclusive_time.append(inclusive_t)
         self.exclusive_time.append(exclusive_t)
         self.callees_count += callees_cnt
+        self.morestack_time.append(morestack_t)
 
 
 
@@ -130,13 +132,14 @@ class TraceContextsMap(Generic[DataT]):
 
 
 class TraceRecord:
-    __slots__ = "func_id", "timestamp", "callees", "callees_time"
+    __slots__ = "func_id", "timestamp", "callees", "callees_time", "morestack_time"
 
     def __init__(self, func_id: int, timestamp: int) -> None:
         self.func_id: int = func_id
         self.timestamp: int = timestamp
         self.callees: int = 0
         self.callees_time: int = 0
+        self.morestack_time: int = 0
 
 
 
@@ -152,12 +155,17 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
 
             func_id = int(parts[0])
             event_type = int(parts[1])
-            # pid = int(parts[2])
-            # tgid = int(parts[3])
-            # goid = int(parts[4])
-            ts = int(parts[5])
+            morestack = int(parts[2])
+            # pid = int(parts[3])
+            # tgid = int(parts[4])
+            goid = int(parts[5])
+            ts = int(parts[6])
 
             if event_type == 0:
+                if morestack == 1:
+                    top_record = record_stack.pop()
+                    # TODO calculate stack resize time
+                    continue
                 record_stack.append(TraceRecord(func_id, ts))
                 continue
             found_matching_record = True
@@ -197,7 +205,7 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
                 duration - top_record.callees_time,
                 top_record.callees
             )
-            # print(func_map[top_record.func_id], "inc:", duration / NS_TO_MS, "ms", "excl", duration - top_record.callees_time / NS_TO_MS, "ms", "callees:", top_record.callees)
+
         trace_contexts.total_runtime = ts - trace_contexts.total_runtime
     return trace_contexts
 
