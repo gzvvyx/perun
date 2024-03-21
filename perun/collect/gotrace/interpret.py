@@ -148,6 +148,7 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
     # Dummy TraceRecord for measuring exclusive time of the top-most function call
     record_stacks: dict[int, List[TraceRecord]] = {}
     trace_contexts = TraceContextsMap(func_map, data_type)
+    first_record = True
 
     with open(raw_data, 'r') as data_handle:
         for record in data_handle:
@@ -160,6 +161,11 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
             # tgid = int(parts[4])
             goid = int(parts[5])
             ts = int(parts[6])
+
+            # get first timestamp
+            if first_record:
+                trace_contexts.total_runtime = ts
+                first_record = False
 
             if goid not in record_stacks:
                 record_stacks[goid] = [TraceRecord(-1, 0)]
@@ -210,7 +216,7 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
                 duration - top_record.callees_time,
                 top_record.callees
             )
-
+            
         trace_contexts.total_runtime = ts - trace_contexts.total_runtime
     return trace_contexts
 
