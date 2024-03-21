@@ -146,7 +146,7 @@ class TraceRecord:
 
 def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Type[DataT]) -> TraceContextsMap[DataT]:
     # Dummy TraceRecord for measuring exclusive time of the top-most function call
-    record_stack: list[TraceRecord] = [TraceRecord(-1, 0)]
+    record_stacks: dict[int, List[TraceRecord]] = {}
     trace_contexts = TraceContextsMap(func_map, data_type)
 
     with open(raw_data, 'r') as data_handle:
@@ -161,19 +161,23 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
             goid = int(parts[5])
             ts = int(parts[6])
 
+            if goid not in record_stacks:
+                record_stacks[goid] = [TraceRecord(-1, 0)]
+
             if event_type == 0:
                 if morestack == 1:
-                    top_record = record_stack.pop()
+                    top_record = record_stacks[goid].pop()
                     # TODO calculate stack resize time
                     continue
-                record_stack.append(TraceRecord(func_id, ts))
+                record_stacks[goid].append(TraceRecord(func_id, ts))
                 continue
+            
             found_matching_record = True
             while True:
-                if not record_stack:
+                if not record_stacks[goid]:
                     found_matching_record = False
                     break
-                top_record = record_stack.pop()
+                top_record = record_stacks[goid].pop()
 
                 if top_record.func_id != func_id:
                     log.warn(
@@ -182,6 +186,7 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
                         )
                     continue
                 break
+            
             if not found_matching_record:
                 log.warn(f"no calling event for {func_map.get(func_id, func_id)} (skipping)")
                 continue
@@ -192,11 +197,11 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
                         f" duration {duration} is negative."
                     )
             # Obtain the trace from the stack
-            trace = tuple(record.func_id for record in record_stack if record.func_id != -1)
-            # print(trace)
+            trace = tuple(record.func_id for record in record_stacks[goid] if record.func_id != -1)
+            print(goid, trace)
             # Update the exclusive time of the parent call
-            record_stack[-1].callees += 1
-            record_stack[-1].callees_time += duration
+            record_stacks[goid][-1].callees += 1
+            record_stacks[goid][-1].callees_time += duration
             # Register the new function duration record
             trace_contexts.add(
                 top_record.func_id,
