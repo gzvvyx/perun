@@ -132,11 +132,12 @@ class TraceContextsMap(Generic[DataT]):
 
 
 class TraceRecord:
-    __slots__ = "func_id", "timestamp", "callees", "callees_time", "morestack_time"
+    __slots__ = "func_id", "timestamp", "callees", "callees_time", "morestack", "morestack_time"
 
-    def __init__(self, func_id: int, timestamp: int) -> None:
+    def __init__(self, func_id: int, timestamp: int, morestack: bool) -> None:
         self.func_id: int = func_id
         self.timestamp: int = timestamp
+        self.morestack: bool = morestack
         self.callees: int = 0
         self.callees_time: int = 0
         self.morestack_time: int = 0
@@ -149,6 +150,8 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
     record_stacks: dict[int, List[TraceRecord]] = {}
     trace_contexts = TraceContextsMap(func_map, data_type)
     first_record = True
+
+    print(func_map)
 
     with open(raw_data, 'r') as data_handle:
         for record in data_handle:
@@ -168,14 +171,10 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
                 first_record = False
 
             if goid not in record_stacks:
-                record_stacks[goid] = [TraceRecord(-1, 0)]
+                record_stacks[goid] = [TraceRecord(-1, 0, 0)]
 
             if event_type == 0:
-                if morestack == 1:
-                    top_record = record_stacks[goid].pop()
-                    # TODO calculate stack resize time
-                    continue
-                record_stacks[goid].append(TraceRecord(func_id, ts))
+                record_stacks[goid].append(TraceRecord(func_id, ts, morestack))
                 continue
             
             found_matching_record = True
@@ -191,6 +190,22 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
                             f" but got {func_map.get(func_id, func_id)}."
                         )
                     continue
+
+                # look for morestack
+                while True:
+                    if not record_stacks[goid]:
+                        # there is nothing
+                        break
+                    if record_stacks[goid][-1].func_id != func_id:
+                        # there is no morestack
+                        break
+                    if record_stacks[goid][-1].morestack == 0:
+                        # recursion
+                        break
+                    # calculate morestack
+                    record_stacks[goid].pop()
+                    morestack_record = record_stacks[goid].pop()
+                    top_record.morestack_time = top_record.timestamp - morestack_record.timestamp
                 break
             
             if not found_matching_record:
@@ -203,8 +218,14 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
                         f" duration {duration} is negative."
                     )
             # Obtain the trace from the stack
-            trace = tuple(record.func_id for record in record_stacks[goid] if record.func_id != -1)
-            print(goid, trace)
+            trace_list = []
+            for record in record_stacks[goid]:
+                if record.morestack == 1:
+                    trace_list.pop()
+                if record.func_id != -1:
+                    trace_list.append(record.func_id)
+            trace = tuple(trace_list)
+            # print(goid, trace)
             # Update the exclusive time of the parent call
             record_stacks[goid][-1].callees += 1
             record_stacks[goid][-1].callees_time += duration
@@ -216,7 +237,7 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
                 duration - top_record.callees_time,
                 top_record.callees
             )
-            
+
         trace_contexts.total_runtime = ts - trace_contexts.total_runtime
     return trace_contexts
 
