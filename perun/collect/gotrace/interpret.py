@@ -207,8 +207,6 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
                     record_stacks[goid].pop()
                     morestack_record = record_stacks[goid].pop()
                     top_record.morestack_time = top_record.timestamp - morestack_record.timestamp
-
-                print(top_record.func_id, top_record.morestack_time)
                 break
             
             if not found_matching_record:
