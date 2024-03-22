@@ -28,7 +28,7 @@ DataT = TypeVar("DataT", bound="FuncData")
 
 class FuncData(ABC):
     @abstractmethod
-    def update(self, inclusive_t: int, exclusive_t: int, callees_cnt: int) -> None:
+    def update(self, inclusive_t: int, exclusive_t: int, callees_cnt: int, morestack_t: int) -> None:
         ...
 
 
@@ -56,6 +56,7 @@ class FuncDataFlat(FuncData):
     __slots__ = [
         "inclusive_time",
         "exclusive_time",
+        "morestack_time",
         "incl_t_min",
         "incl_t_max",
         "excl_t_min",
@@ -67,6 +68,7 @@ class FuncDataFlat(FuncData):
     def __init__(self) -> None:
         self.inclusive_time: int = 0
         self.exclusive_time: int = 0
+        self.morestack_time: int = 0
         self.incl_t_min: int = -1
         self.incl_t_max: int = 0
         self.excl_t_min: int = -1
@@ -74,9 +76,10 @@ class FuncDataFlat(FuncData):
         self.call_count: int = 0
         self.callees_count: int = 0
 
-    def update(self, inclusive_t: int, exclusive_t: int, callees_cnt: int) -> None:
+    def update(self, inclusive_t: int, exclusive_t: int, callees_cnt: int, morestack_t: int) -> None:
         self.inclusive_time += inclusive_t
         self.exclusive_time += exclusive_t
+        self.morestack_time += morestack_t
         self.call_count += 1
         self.callees_count += callees_cnt
         # Update the max and min values
@@ -105,11 +108,11 @@ class TraceContextsMap(Generic[DataT]):
         self.total_runtime: int = 0
 
     def add(
-        self, func_id: int, trace: tuple[int, ...], inclusive_t: int, exclusive_t: int, callees: int
+        self, func_id: int, trace: tuple[int, ...], inclusive_t: int, exclusive_t: int, callees: int, morestack_t: int
     ) -> None:
         trace_id = self.trace_map.setdefault(trace, len(self.trace_map))
         func_times = self.durations.setdefault((func_id, trace_id), self.data_t())
-        func_times.update(inclusive_t, exclusive_t, callees)
+        func_times.update(inclusive_t, exclusive_t, callees, morestack_t)
 
     def __iter__(self) -> Iterator[tuple[str, tuple[str, ...], DataT]]:
         # Reverse the trace map for fast retrieval of Trace ID -> Trace
@@ -150,8 +153,6 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
     record_stacks: dict[int, List[TraceRecord]] = {}
     trace_contexts = TraceContextsMap(func_map, data_type)
     first_record = True
-
-    print(func_map)
 
     with open(raw_data, 'r') as data_handle:
         for record in data_handle:
@@ -206,6 +207,8 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
                     record_stacks[goid].pop()
                     morestack_record = record_stacks[goid].pop()
                     top_record.morestack_time = top_record.timestamp - morestack_record.timestamp
+
+                print(top_record.func_id, top_record.morestack_time)
                 break
             
             if not found_matching_record:
@@ -235,7 +238,8 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
                 trace,
                 duration,
                 duration - top_record.callees_time,
-                top_record.callees
+                top_record.callees,
+                top_record.morestack_time
             )
 
         trace_contexts.total_runtime = ts - trace_contexts.total_runtime
@@ -258,6 +262,8 @@ def traces_flat_to_pandas(trace_contexts: TraceContextsMap[FuncDataFlat]) -> pd.
                 func_times.inclusive_time / trace_contexts.total_runtime,
                 func_times.exclusive_time / NS_TO_MS,
                 func_times.exclusive_time / trace_contexts.total_runtime,
+                func_times.morestack_time / NS_TO_MS,
+                func_times.morestack_time / trace_contexts.total_runtime,
                 func_times.inclusive_time / func_times.call_count / NS_TO_MS,
                 func_times.exclusive_time / func_times.call_count / NS_TO_MS,
                 func_times.incl_t_min,
@@ -278,6 +284,8 @@ def traces_flat_to_pandas(trace_contexts: TraceContextsMap[FuncDataFlat]) -> pd.
             "Total Inclusive T [%]",
             "Total Exclusive T [ms]",
             "Total Exclusive T [%]",
+            "Total Morestack T [ms]",
+            "Total Morestack T [%]",
             "I Mean",
             "E Mean",
             "I Min",
@@ -321,6 +329,8 @@ def append_resources(
         )
 
 
+
+
 def pandas_to_resources(df: pd.DataFrame) -> list[dict[str, Any]]:
     """Transforms pandas dataframe to list of resources
 
@@ -349,19 +359,6 @@ def pandas_to_resources(df: pd.DataFrame) -> list[dict[str, Any]]:
     return resources
 
 
-def trace_details_to_resources(
-    trace_contexts: TraceContextsMap[FuncDataDetails],
-) -> list[dict[str, Any]]:
-    """Converts the traces into a list of resources saveable to Perun
-
-    :param trace_contexts: structure that holds trace context
-    :return: list of dictionaries, with key and values as needed by perun
-    """
-    resources = []
-    for func_name, trace, func_times in trace_contexts:
-        append_resources(func_name, trace, resources, func_times.inclusive_time, "inclusive")
-        append_resources(func_name, trace, resources, func_times.exclusive_time, "exclusive")
-    return resources
 
 
 def traces_details_to_pandas(trace_contexts: TraceContextsMap[FuncDataDetails]) -> pd.DataFrame:
@@ -375,6 +372,7 @@ def traces_details_to_pandas(trace_contexts: TraceContextsMap[FuncDataDetails]) 
             percentiles=[0.10, 0.25, 0.50, 0.75, 0.90]
         )
         exclusive_sum = sum(func_times.exclusive_time)
+        morestack_sum = sum(func_times.morestack_time)
         incl_excl_flattened = [
             val / NS_TO_MS
             for incl_excl_tuple in zip(inclusive_t_stats.iloc[1:], exclusive_t_stats.iloc[1:])
@@ -391,6 +389,8 @@ def traces_details_to_pandas(trace_contexts: TraceContextsMap[FuncDataDetails]) 
                 inclusive_sum / trace_contexts.total_runtime,
                 exclusive_sum / NS_TO_MS,
                 exclusive_sum / trace_contexts.total_runtime,
+                morestack_sum / NS_TO_MS,
+                morestack_sum / trace_contexts.total_runtime,
                 *incl_excl_flattened,
             )
         )
@@ -407,6 +407,8 @@ def traces_details_to_pandas(trace_contexts: TraceContextsMap[FuncDataDetails]) 
             "Total Inclusive T [%]",
             "Total Exclusive T [ms]",
             "Total Exclusive T [%]",
+            "Total Morestack T [ms]",
+            "Total Morestack T [%]",
             "I Mean",
             "E Mean",
             "I Std",
@@ -429,3 +431,21 @@ def traces_details_to_pandas(trace_contexts: TraceContextsMap[FuncDataDetails]) 
     )
     df.sort_values(by=["Total Exclusive T [%]"], inplace=True, ascending=False)
     return df
+
+
+
+
+def trace_details_to_resources(
+    trace_contexts: TraceContextsMap[FuncDataDetails],
+) -> list[dict[str, Any]]:
+    """Converts the traces into a list of resources saveable to Perun
+
+    :param trace_contexts: structure that holds trace context
+    :return: list of dictionaries, with key and values as needed by perun
+    """
+    resources = []
+    for func_name, trace, func_times in trace_contexts:
+        append_resources(func_name, trace, resources, func_times.inclusive_time, "inclusive")
+        append_resources(func_name, trace, resources, func_times.exclusive_time, "exclusive")
+        append_resources(func_name, trace, resources, func_times.morestack_time, "morestack")
+    return resources

@@ -352,8 +352,8 @@ int BPF_UPROBE(main_Greet_entry) {
 }
 
 
-// Exit of main.Greet with offset 0x8f
-SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.Greet+0x8f")
+// Exit of main.Greet with offset 0x133
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.Greet+0x133")
 int BPF_UPROBE(main_Greet_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -400,7 +400,7 @@ int BPF_UPROBE(main_Greet_leave_0)
 }
 
 // Morestack of main.Greet
-SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.Greet+0x90")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.Greet+0x148")
 int BPF_UPROBE(main_Greet_morestack) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -638,8 +638,8 @@ int BPF_UPROBE(main_add_entry) {
 }
 
 
-// Exit of main.add with offset 0x67
-SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add+0x67")
+// Exit of main.add with offset 0xe0
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add+0xe0")
 int BPF_UPROBE(main_add_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -685,8 +685,8 @@ int BPF_UPROBE(main_add_leave_0)
 	return 0;
 }
 
-// Exit of main.add with offset 0x75
-SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add+0x75")
+// Exit of main.add with offset 0xee
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add+0xee")
 int BPF_UPROBE(main_add_leave_1)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -733,7 +733,7 @@ int BPF_UPROBE(main_add_leave_1)
 }
 
 // Morestack of main.add
-SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add+0xa3")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.add+0x120")
 int BPF_UPROBE(main_add_morestack) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -828,8 +828,8 @@ int BPF_UPROBE(main_main_entry) {
 }
 
 
-// Exit of main.main with offset 0x3b7
-SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main+0x3b7")
+// Exit of main.main with offset 0x42d
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main+0x42d")
 int BPF_UPROBE(main_main_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -876,7 +876,7 @@ int BPF_UPROBE(main_main_leave_0)
 }
 
 // Morestack of main.main
-SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main+0x3b8")
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main+0x42e")
 int BPF_UPROBE(main_main_morestack) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
@@ -923,9 +923,9 @@ int BPF_UPROBE(main_main_morestack) {
 }
 
 
-// Entry of main.main.func1
-SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func1")
-int BPF_UPROBE(main_main_func1_entry) {
+// Entry of main.main.func2
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func2")
+int BPF_UPROBE(main_main_func2_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
@@ -966,14 +966,14 @@ int BPF_UPROBE(main_main_func1_entry) {
 
 	bpf_ringbuf_submit(evt, 0);
 	
-	bpf_printk("main.main.func1 entry");
+	bpf_printk("main.main.func2 entry");
 	return 0;
 }
 
 
-// Exit of main.main.func1 with offset 0xb1
-SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func1+0xb1")
-int BPF_UPROBE(main_main_func1_leave_0)
+// Exit of main.main.func2 with offset 0xaa
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func2+0xaa")
+int BPF_UPROBE(main_main_func2_leave_0)
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
@@ -1014,13 +1014,13 @@ int BPF_UPROBE(main_main_func1_leave_0)
 
 	bpf_ringbuf_submit(evt, 0);
 	
-	bpf_printk("main.main.func1 leave 0");
+	bpf_printk("main.main.func2 leave 0");
 	return 0;
 }
 
-// Morestack of main.main.func1
-SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func1+0xb8")
-int BPF_UPROBE(main_main_func1_morestack) {
+// Morestack of main.main.func2
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func2+0xb1")
+int BPF_UPROBE(main_main_func2_morestack) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
@@ -1058,6 +1058,149 @@ int BPF_UPROBE(main_main_func1_morestack) {
 	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
 	evt->func = 6;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.main.func2 morestack");
+	return 0;
+}
+
+
+// Entry of main.main.func1
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func1")
+int BPF_UPROBE(main_main_func1_entry) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->morestack = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 7;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.main.func1 entry");
+	return 0;
+}
+
+
+// Exit of main.main.func1 with offset 0xaa
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func1+0xaa")
+int BPF_UPROBE(main_main_func1_leave_0)
+{
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 1;
+	evt->morestack = 0;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 7;
+
+	bpf_ringbuf_submit(evt, 0);
+	
+	bpf_printk("main.main.func1 leave 0");
+	return 0;
+}
+
+// Morestack of main.main.func1
+SEC("uprobe///home/gzvv/Desktop/bp/greet/greet:main.main.func1+0xb1")
+int BPF_UPROBE(main_main_func1_morestack) {
+
+	u64 tgid_pid = bpf_get_current_pid_tgid();
+	u32 pid = tgid_pid >> 32;
+	u32 tgid = tgid_pid;
+
+	struct task_struct *task = (struct task_struct *)bpf_get_current_task();
+    uint64_t fsbase = 0;
+    uint64_t gaddr = 0;
+	uint64_t goid = 0;
+
+	if (task) {
+        bpf_probe_read(&fsbase, sizeof(fsbase), (void *)&task->thread.fsbase);
+        if (fsbase) {
+            // Assuming the gaddr is at offset -8 from fsbase 0xfffffffffffffff8
+            bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
+        }
+		if(gaddr) {
+			// Assuming the goid is at offset 152 (18*uint_64 + 2*uint32_t) from gaddr
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+		}
+    }
+
+	struct basic_info *evt = {0};
+
+	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
+	if (!evt) {
+		bpf_printk("ringbuffer not reserved");
+		return 0;
+	}
+
+	evt->type = 0;
+	evt->morestack = 1;
+	evt->tgid = tgid;
+	evt->pid = pid;
+	evt->goid = goid;
+	evt->ts = bpf_ktime_get_ns();
+	evt->func = 7;
 
 	bpf_ringbuf_submit(evt, 0);
 	
