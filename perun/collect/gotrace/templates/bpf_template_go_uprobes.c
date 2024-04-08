@@ -38,8 +38,10 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_entry) {
             bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
         }
 		if(gaddr) {
-			// Assuming the goid is at offset 152 from gaddr
-			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+			// Calculate the offset of goid within the struct g
+			size_t goid_offset = offsetof(struct g, goid);
+			// Read goid safely from the structure
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + goid_offset));
 		}
     }
 
@@ -86,8 +88,10 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_leave_{{ loop.index0 }})
             bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
         }
 		if(gaddr) {
-			// Assuming the goid is at offset 152 from gaddr
-			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+			// Calculate the offset of goid within the struct g
+			size_t goid_offset = offsetof(struct g, goid);
+			// Read goid safely from the structure
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + goid_offset));
 		}
     }
 
@@ -133,8 +137,10 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_morestack) {
             bpf_probe_read(&gaddr, sizeof(gaddr), (void *)(fsbase - 8));
         }
 		if(gaddr) {
-			// Assuming the goid is at offset 152 (18*uint_64 + 2*uint32_t) from gaddr
-			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + 152));
+			// Calculate the offset of goid within the struct g
+			size_t goid_offset = offsetof(struct g, goid);
+			// Read goid safely from the structure
+			bpf_probe_read(&goid, sizeof(goid), (void *)(gaddr + goid_offset));
 		}
     }
 
