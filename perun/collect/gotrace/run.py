@@ -38,6 +38,8 @@ def before(**kwargs: Any) -> tuple[CollectStatus, str, dict[str, Any]]:
 
     kwargs["idx_to_func"], kwargs["symbol_map"] = symbols.get_symbols(str(kwargs["executable"]), kwargs["packages"])
 
+    log.minor_info(f"Found these functions {list(kwargs['symbol_map'].keys())}")
+
     log.minor_success("Generating the source of the eBPF program")
 
     executable_dir = str(Path.cwd()) + str(kwargs["executable"])[1:]

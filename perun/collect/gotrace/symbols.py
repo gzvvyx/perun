@@ -28,7 +28,6 @@ def get_symbols(traced_file: Path, packages: List[str]) -> tuple[dict[int, str],
     # find user declared functions
     sec = e.get_section_by_name('.symtab')
     for sym in sec.iter_symbols():
-        # "main" signals package -- should add param for all packages
         if sym["st_shndx"] == 1 and sym["st_info"].type == "STT_FUNC":
             if sym.name.startswith("type:"):
                 continue
