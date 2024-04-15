@@ -10,11 +10,12 @@ import click
 import os
 import pandas as pd
 import jinja2
-import holoviews as hv
-from holoviews import opts, dim
-hv.extension('bokeh')
+import matplotlib.colors as mcolors
+
+import plotly.graph_objects as go
 
 # Perun Imports
+from perun.profile import helpers
 from perun.utils import log
 from perun.utils.common import cli_kit, common_kit, view_kit
 from perun.profile.factory import Profile
@@ -33,6 +34,7 @@ class SankeyRecord:
     :ivar trace: trace of the record
     :ivar caller: uid of the caller
     :ivar trace_list: trace as list of formatted strings
+    :ivar total_incl_t: total inclusive time
     :ivar total_excl_t: total exclusive time
     :ivar total_morestack_t: total morestack time
     """
@@ -41,6 +43,7 @@ class SankeyRecord:
     trace: str
     caller: str
     trace_list: list[str]
+    total_incl_t: float
     total_excl_t: float
     total_morestack_t: float
 
@@ -62,6 +65,7 @@ def generate_trace_list(trace: str, uid: str) -> list[str]:
         indent = " " * i
         data.append(lhs)
     return data
+
 
 def generate_caller(trace: str) -> str:
     """Generates list of traces
@@ -95,35 +99,159 @@ def profile_to_data(profile: Profile) -> list[SankeyRecord]:
                 generate_caller(row["trace"]),
                 generate_trace_list(row["trace"], row["uid"]),
                 row["Total Inclusive T [ms]"],
+                row["Total Exclusive T [ms]"],
                 row["Total Morestack T [ms]"]
             )
         )
     return data
-    
 
-def generate_sankey(profile: Profile, **kwargs: Any) -> None:
-    data = profile_to_data(profile)
-    
-    pairs = []
+def generate_pairs(data: List[SankeyRecord]) -> Tuple[List[str], List[List[str, str, float]], List[List[str, str, float]]]:
+    labels = []
+    label_map = {}
+    pairs_excl = []
+    pairs_incl = []
+
     for record in data:
+        # here add check if record.uid is in map
+        if record.uid not in labels:
+            labels.append(record.uid)
+            label_map[record.uid] = len(labels) - 1
+
+        # no caller
         if record.caller == '':
             split_record = record.uid.split('.')
             if len(split_record) == 3:
-                pairs.append([split_record[0] + '.' + split_record[1], record.uid, record.total_excl_t])
+                # is goroutine, create caller
+                record.caller = split_record[0] + '.' + split_record[1]
+            # maybe create unknown caller
+            if record.uid.endswith(".main"):
                 continue
-            # pairs.append(['Total Time', record.uid, record.total_excl_t])
-            continue
+
+        # here add check if record.caller is in map
+        if record.caller not in labels:
+            labels.append(record.caller)
+            label_map[record.caller] = len(labels) - 1
+
         if record.total_morestack_t != 0.0:
-            pairs.append([record.uid, record.uid + ' Morestack', record.total_morestack_t])
-            continue
-        pairs.append([record.caller, record.uid, record.total_excl_t])
+            # add morestack pair
+            morestack_uid = record.uid + "__morestack"
+            if morestack_uid not in labels:
+                labels.append(morestack_uid)
+                label_map[morestack_uid] = len(labels) - 1
+            pairs_excl.append([label_map[record.uid], label_map[morestack_uid], record.total_morestack_t])                
+            pairs_incl.append([label_map[record.uid], label_map[morestack_uid], record.total_morestack_t])
 
-    print(pairs)
+        # add pairs
+        pairs_excl.append([label_map[record.caller], label_map[record.uid], record.total_excl_t])
+        pairs_incl.append([label_map[record.caller], label_map[record.uid], record.total_incl_t])
 
-    sankey = hv.Sankey(pairs)
-    sankey.opts(width=1200, height=800)
+    return labels, pairs_excl, pairs_incl
 
-    view_kit.save_view_graph(sankey, '/home/gzvv/Desktop/bp/sankey.html', True)
+
+def pairs_to_links(pairs: List[List[int, int, float]]) -> dict:
+    links = {
+        "source": [],
+        "target": [],
+        "value": []
+    }
+    
+    for pair in pairs:
+        links["source"].append(pair[0])
+        links["target"].append(pair[1])
+        links["value"].append(pair[2])
+
+    return links
+    
+
+def generate_colors(N: int) -> Tuple[List[str], List[str]]:
+    node_colors = []
+    link_colors = []
+
+    colors = []
+    colormap = mcolors.ColorConverter().to_rgb
+    color_cycle = [colormap(i) for i in range(N)]
+    for color in color_cycle:
+        colors.append(mcolors.to_hex(color))
+
+    return colors, link_colors
+
+def generate_sankey(profile: Profile, **kwargs: Any) -> None:
+    log.minor_info("Starting generating")
+
+    data = profile_to_data(profile)
+
+    log.minor_info("Generating pairs and labels")
+    
+    labels, pairs_excl, pairs_incl = generate_pairs(data)
+
+    links_excl = pairs_to_links(pairs_excl)
+    links_incl = pairs_to_links(pairs_incl)
+
+    log.minor_info("Generating colors")
+
+    # node_colors, link_colors = generate_colors(len(labels))
+
+    log.minor_info("Generating figures")
+    
+    fig_excl = go.Figure(go.Sankey(
+        valueformat = ".000f",
+        valuesuffix = " ms",
+        node = dict(
+            pad = 50,
+            thickness = 15,
+            line = dict(color = "black", width = 0.5),
+            label = labels,
+            color = "blue"
+        ),
+        link = dict(
+            source = links_excl["source"],
+            target = links_excl["target"],
+            value = links_excl["value"],
+        )
+    ))
+
+    fig_incl = go.Figure(go.Sankey(
+        valueformat = ".000f",
+        valuesuffix = " ms",
+        node = dict(
+            pad = 50,
+            thickness = 15,
+            line = dict(color = "black", width = 0.5),
+            label = labels,
+            color = "red"
+        ),
+        link = dict(
+            source = links_incl["source"],
+            target = links_incl["target"],
+            value = links_incl["value"],
+        )
+    ))
+
+    # TODO: add this to view_kit.save_view_graph
+    output_file = kwargs["output_file"]
+    if output_file is None:
+        prof_name = os.path.splitext(helpers.generate_profile_name(profile))[0]
+        output_file = f"sankey-of-{prof_name}" + ".html"
+
+    if not output_file.endswith(".html"):
+        output_file += ".html"
+
+    env = jinja2.Environment(loader=jinja2.PackageLoader("perun", "templates"))
+    template = env.get_template("view_sankey.html.jinja2")
+    content = template.render(
+        main_title="Sankey representation of Go program traces",
+        title1="Exclusive Time [ms]",
+        figure1=fig_excl.to_html(full_html=False),
+        title2="Inclusive Time [ms]",
+        figure2=fig_incl.to_html(full_html=False),
+    )
+
+    log.minor_success(f"Sankey", "generated")
+    
+    with open(output_file, "w", encoding="utf-8") as template_out:
+        template_out.write(content)
+
+    log.minor_success("Output saved", log.path_style(output_file))
 
 
 

@@ -8,6 +8,7 @@ perun_templates_files = files(
     'postprocess.run.jinja2',
     'view.__init__.jinja2',
     'view.run.jinja2',
+    'view_sankey.html.jinja2',
 )
 
 py3.install_sources(

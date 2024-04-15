@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Perun view - Sankey</title>
+    <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src='https://cdn.plot.ly/plotly-2.30.0.min.js'></script>
+    <style>
+        html {
+            font-family: "Courier New", Courier, monospace;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        .column {
+            width: 48%;
+            margin: 0 1%;
+        }
+        .left {
+            float: left;
+        }
+        .right {
+            float: right;
+        }
+        .middle {
+            width: 98%;
+            margin: 0 1%;
+            justtify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="middle">
+    <h1>{{ main_title }}</h1>
+        <div class="left column">
+            <h2>{{ title1 }}</h2>
+            {{ figure1 }}
+        </div>
+        <div class="right column">
+            <h2>{{ title2 }}</h2>
+            {{ figure2 }}
+        </div>
+    </div>
+</body>
+</html>
