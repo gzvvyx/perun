@@ -9,10 +9,12 @@ from typing import Any
 import click
 import os
 import pandas as pd
+import numpy as np
 import jinja2
 import matplotlib.colors as mcolors
 
 import plotly.graph_objects as go
+import plotly.express as pex
 
 # Perun Imports
 from perun.profile import helpers
@@ -163,18 +165,6 @@ def pairs_to_links(pairs: List[List[int, int, float]]) -> dict:
     return links
     
 
-def generate_colors(N: int) -> Tuple[List[str], List[str]]:
-    node_colors = []
-    link_colors = []
-
-    colors = []
-    colormap = mcolors.ColorConverter().to_rgb
-    color_cycle = [colormap(i) for i in range(N)]
-    for color in color_cycle:
-        colors.append(mcolors.to_hex(color))
-
-    return colors, link_colors
-
 def generate_sankey(profile: Profile, **kwargs: Any) -> None:
     log.minor_info("Starting generating")
 
@@ -187,11 +177,10 @@ def generate_sankey(profile: Profile, **kwargs: Any) -> None:
     links_excl = pairs_to_links(pairs_excl)
     links_incl = pairs_to_links(pairs_incl)
 
-    log.minor_info("Generating colors")
+    colors = pex.colors.qualitative.D3
+    node_colors_mappings = dict([(node,np.random.choice(colors)) for node in labels])
+    node_colors = [node_colors_mappings[node] for node in labels]
 
-    # node_colors, link_colors = generate_colors(len(labels))
-
-    log.minor_info("Generating figures")
     
     fig_excl = go.Figure(go.Sankey(
         valueformat = ".000f",
@@ -201,12 +190,12 @@ def generate_sankey(profile: Profile, **kwargs: Any) -> None:
             thickness = 15,
             line = dict(color = "black", width = 0.5),
             label = labels,
-            color = "blue"
+            color = node_colors
         ),
         link = dict(
             source = links_excl["source"],
             target = links_excl["target"],
-            value = links_excl["value"],
+            value = links_excl["value"]
         )
     ))
 
@@ -218,7 +207,7 @@ def generate_sankey(profile: Profile, **kwargs: Any) -> None:
             thickness = 15,
             line = dict(color = "black", width = 0.5),
             label = labels,
-            color = "red"
+            color = node_colors
         ),
         link = dict(
             source = links_incl["source"],
@@ -252,9 +241,6 @@ def generate_sankey(profile: Profile, **kwargs: Any) -> None:
         template_out.write(content)
 
     log.minor_success("Output saved", log.path_style(output_file))
-
-
-
 
 
 @click.command()
