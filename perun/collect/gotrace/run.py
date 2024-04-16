@@ -70,6 +70,9 @@ def collect(**kwargs: Any) -> tuple[CollectStatus.OK, str, dict[str, Any]]:
             break
         time.sleep(BUSY_WAIT)
 
+    log.minor_info(f"waiting for {log.highlight('gotrace')} to attach", end="")
+    time.sleep(BUSY_WAIT)
+
     log.minor_success(f"{log.highlight('gotrace')}", "running")
 
     failed_reason = ""
