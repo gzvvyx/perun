@@ -67,6 +67,9 @@ def get_symbols(traced_file: Path, packages: List[str]) -> tuple[dict[int, str],
             if asm == f"CALL {hex(morestack_addr)}" or asm == f"CALL {hex(morestack_noctxt_addr)}":
                 morestack_offset = hex(addr - func[1])
 
+        if morestack_offset == '':
+            morestack_offset = None
+
         symbol_map[func[0]] = (offsets, morestack_offset)
 
     idx_name_map = {i: name for i, (name, _) in enumerate(symbol_map.items())}

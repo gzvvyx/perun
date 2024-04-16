@@ -20,7 +20,7 @@ struct {
 {% set func_id = loop.index0 %}
 // Entry of {{ func_name }}
 SEC("uprobe//{{ path }}:{{ func_name }}")
-int BPF_UPROBE({{ func_name|replace(".", "_") }}_entry) {
+int BPF_UPROBE({{ func_name|replace(".", "_") | replace("*", "_atx_") | replace("/", "_sl_") | replace("(","_L_") | replace(")", "_R_") }}_entry) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
@@ -70,7 +70,7 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_entry) {
 {% for offset in offsets %}
 // Exit of {{ func_name }} with offset {{ offset }}
 SEC("uprobe//{{ path }}:{{ func_name }}+{{ offset }}")
-int BPF_UPROBE({{ func_name|replace(".", "_") }}_leave_{{ loop.index0 }})
+int BPF_UPROBE({{ func_name|replace(".", "_") | replace("*", "_atx_") | replace("/", "_sl_") | replace("(","_L_") | replace(")", "_R_") }}_leave_{{ loop.index0 }})
 {
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
@@ -117,9 +117,10 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_leave_{{ loop.index0 }})
 	return 0;
 }
 {% endfor %}
+{% if morestack is not none %}
 // Morestack of {{ func_name }}
 SEC("uprobe//{{ path }}:{{ func_name }}+{{ morestack }}")
-int BPF_UPROBE({{ func_name|replace(".", "_") }}_morestack) {
+int BPF_UPROBE({{ func_name|replace(".", "_") | replace("*", "_atx_") | replace("/", "_sl_") | replace("(","_L_") | replace(")", "_R_") }}_morestack) {
 
 	u64 tgid_pid = bpf_get_current_pid_tgid();
 	u32 pid = tgid_pid >> 32;
@@ -165,6 +166,9 @@ int BPF_UPROBE({{ func_name|replace(".", "_") }}_morestack) {
 	bpf_printk("{{ func_name }} morestack");
 	return 0;
 }
+{% else %}
+// {{ func_name }} has no morestack
+{% endif %}
 {% endfor %}
 
 
