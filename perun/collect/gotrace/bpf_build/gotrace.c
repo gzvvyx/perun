@@ -38,11 +38,10 @@ void sig_handler(int sig) {
 
 static int handle_event(void *ctx, void *data, size_t data_sz)
 {
-	const struct basic_info *e = data;
+	const struct record *e = data;
 	FILE *out = (FILE *)ctx;
-	// fwrite(e, sizeof(e), 1, out);
-	// fID;TYPE;MORESTACK;PID;TGID;GOID;TIMESTAMP
-	fprintf(out, "%u;%d;%d;%u;%u;%llu;%llu\n", e->func, e->type, e->morestack, e->pid, e->tgid, e->goid, e->ts);
+	// fID;TYPE;MORESTACK;GOID;TIMESTAMP
+	fprintf(out, "%u;%d;%d;%llu;%llu\n", e->func, e->type, e->morestack, e->goid, e->ts);
 
 	return 0;
 }
@@ -65,24 +64,21 @@ int main(int argc, char **argv)
 
 	LIBBPF_OPTS(bpf_uprobe_opts, uprobe_opts);
 
-	/* Load and verify BPF application */
+	/* Load and verify eBPF application */
 	skel = gotrace_bpf__open_and_load();
 	if (!skel) {
 		fprintf(stdout, "Failed to open and load BPF skeleton\n");
 		return 1;
 	}
 
-	/* Let libbpf perform auto-attach for greet_handler
-	 * NOTICE: we provide path and symbol info in SEC for BPF programs
+	/* Let libbpf perform auto-attach for our eBPF programs
+	 * NOTICE: we provide path and symbol info in SEC for eBPF programs
 	 */
 	err = gotrace_bpf__attach(skel);
 	if (err) {
 		fprintf(stderr, "Failed to auto-attach BPF skeleton: %d\n", err);
 		goto cleanup;
 	}
-
-	// printf("Successfully started! Please run `sudo cat /sys/kernel/debug/tracing/trace_pipe` "
-	//        "to see output of the BPF programs.\n");
 
 
 	// Prepare output file

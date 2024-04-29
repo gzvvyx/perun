@@ -141,10 +141,8 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
             func_id = int(parts[0])
             event_type = int(parts[1])
             morestack = int(parts[2])
-            # pid = int(parts[3])
-            # tgid = int(parts[4])
-            goid = int(parts[5])
-            ts = int(parts[6])
+            goid = int(parts[3])
+            ts = int(parts[4])
 
             # get first timestamp
             if first_record:
@@ -274,37 +272,6 @@ def traces_to_pandas(trace_contexts: TraceContextsMap[FuncDataFlat]) -> pd.DataF
     )
     df.sort_values(by=["Total Exclusive T [%]"], inplace=True, ascending=False)
     return df
-
-
-
-
-def append_resources(
-    func_name: str,
-    trace: tuple[str],
-    resources: list[dict[str, Any]],
-    times: list[int],
-    resource_type: Literal["exclusive", "inclusive"],
-) -> None:
-    """Helper function for simple clustering of the resources
-
-    :param func_name: name of the function for which the resources correspond
-    :param trace: tuple of function names corresponding to the trace of the resource
-    :param resources: resolting resources
-    :param times: measured inclusive/exlusive times
-    :param resource_type: type of resources added (currently supports inclusive or exclusive time
-    """
-    for _, group in itertools.groupby(times, lambda x: (len(str(x)), int(str(x)[0]))):
-        group = list(group)
-        resources.append(
-            {
-                "amount": group[0],
-                "uid": func_name,
-                "ncalls": len(group),
-                "type": "time",
-                "subtype": resource_type,
-                "trace": [{"func": f} for f in trace],
-            }
-        )
 
 
 

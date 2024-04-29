@@ -9,7 +9,6 @@
 
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
-#define GO_ID(x) ((x)->di)
 
 struct {
 	__uint(type, BPF_MAP_TYPE_RINGBUF);
@@ -45,7 +44,7 @@ int BPF_UPROBE({{ func_name|replace(".", "_") | replace("-", "_D_") | replace("*
 		}
     }
 
-	struct basic_info *evt = {0};
+	struct record *evt = {0};
 
 	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
 	if (!evt) {
@@ -55,8 +54,6 @@ int BPF_UPROBE({{ func_name|replace(".", "_") | replace("-", "_D_") | replace("*
 
 	evt->type = 0;
 	evt->morestack = 0;
-	evt->tgid = tgid;
-	evt->pid = pid;
 	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
 	evt->func = {{ func_id }};
@@ -95,7 +92,7 @@ int BPF_UPROBE({{ func_name|replace(".", "_") | replace("-", "_D_") | replace("*
 		}
     }
 
-	struct basic_info *evt = {0};
+	struct record *evt = {0};
 
 	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
 	if (!evt) {
@@ -105,8 +102,6 @@ int BPF_UPROBE({{ func_name|replace(".", "_") | replace("-", "_D_") | replace("*
 
 	evt->type = 1;
 	evt->morestack = 0;
-	evt->tgid = tgid;
-	evt->pid = pid;
 	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
 	evt->func = {{ func_id }};
@@ -145,7 +140,7 @@ int BPF_UPROBE({{ func_name|replace(".", "_") | replace("-", "_D_") | replace("*
 		}
     }
 
-	struct basic_info *evt = {0};
+	struct record *evt = {0};
 
 	evt = bpf_ringbuf_reserve(&rb, sizeof(*evt), 0);
 	if (!evt) {
@@ -155,8 +150,6 @@ int BPF_UPROBE({{ func_name|replace(".", "_") | replace("-", "_D_") | replace("*
 
 	evt->type = 0;
 	evt->morestack = 1;
-	evt->tgid = tgid;
-	evt->pid = pid;
 	evt->goid = goid;
 	evt->ts = bpf_ktime_get_ns();
 	evt->func = {{ func_id }};
