@@ -38,7 +38,10 @@ def before(**kwargs: Any) -> tuple[CollectStatus, str, dict[str, Any]]:
 
     kwargs["idx_to_func"], kwargs["symbol_map"] = symbols.get_symbols(str(kwargs["executable"]), kwargs["packages"])
 
-    log.minor_info(f"Found these functions {list(kwargs['symbol_map'].keys())}")
+    if kwargs["verbose"]:
+        log.minor_info(f"Found these functions {list(kwargs['symbol_map'].keys())}")
+
+    log.minor_info(f"Number of functions: {len(kwargs['symbol_map'])}")
 
     log.minor_success("Generating the source of the eBPF program")
 
@@ -118,40 +121,23 @@ def after(**kwargs: Any) -> tuple[CollectStatus, str, dict[str, Any]]:
     raw_data_file = Path(Path(__file__).resolve().parent, "bpf_build", "output.txt")
     output_file = Path(Path(__file__).resolve().parent, "bpf_build", "profile.csv")
 
-    profile_output_type = kwargs["output_profile_type"]
     save_intermediate = kwargs["save_intermediate_to_csv"]
 
-    if profile_output_type == "flat":
-        flat_parsed_traces = interpret.parse_traces(
-            raw_data_file, kwargs["idx_to_func"], interpret.FuncDataFlat
-        )
-        trace_data = interpret.traces_flat_to_pandas(flat_parsed_traces)
+    parsed_traces = interpret.parse_traces(
+        raw_data_file, kwargs["idx_to_func"], interpret.FuncDataFlat
+    )
+    trace_data = interpret.traces_to_pandas(parsed_traces)
 
-        if save_intermediate:
-            trace_data.to_csv(output_file, index=False)
-        resources = interpret.pandas_to_resources(trace_data)
-        total_runtime = flat_parsed_traces.total_runtime
-    elif profile_output_type == "details":
-        detailed_parsed_traces = interpret.parse_traces(
-            raw_data_file, kwargs["idx_to_func"], interpret.FuncDataDetails
-        )
-        trace_data = interpret.traces_details_to_pandas(detailed_parsed_traces)
-        resources = interpret.pandas_to_resources(trace_data)
-        total_runtime = detailed_parsed_traces.total_runtime
-        if save_intermediate:
-            trace_data.to_csv(output_file, index=False)
-    else:
-        assert profile_output_type == "clustered"
-        detailed_parsed_traces = interpret.parse_traces(
-            raw_data_file, kwargs["idx_to_func"], interpret.FuncDataDetails
-        )
-        resources = interpret.trace_details_to_resources(detailed_parsed_traces)
-        total_runtime = detailed_parsed_traces.total_runtime
+    if save_intermediate:
+        trace_data.to_csv(output_file, index=False)
+    resources = interpret.pandas_to_resources(trace_data)
+    total_runtime = parsed_traces.total_runtime
+    
     log.minor_success("generating profile")
 
     if not resources:
         log.warn("no resources were generated (probably due to empty file?)")
-    if save_intermediate and profile_output_type != "clustered":
+    if save_intermediate:
         log.minor_status(f"intermediate data saved", f"{log.cmd_style(str(output_file))}")
     kwargs["profile"] = {"global": {"time": total_runtime, "resources": resources}}
     return CollectStatus.OK, "", dict(kwargs)
@@ -164,25 +150,11 @@ def after(**kwargs: Any) -> tuple[CollectStatus, str, dict[str, Any]]:
 @click.command()
 @click.argument("packages", required=False, nargs=-1)
 @click.option(
-    "--with-sudo",
-    "-ws",
-    default=False,
-    is_flag=True,
-    help="Whether some commands should be run with sudo or not",
-)
-@click.option(
     "--bpfring-size",
     "-s",
     type=int,
     default=4096 * 4096 * 10,
     help="Size of the ring buffer used in eBPF program. Increasing the size will lead to lesser number of lost events.",
-)  # add checks
-@click.option(
-    "--output-profile-type",
-    "-t",
-    type=click.Choice(["clustered", "details", "flat"]),
-    default="flat",
-    help="type of the resulting profile; clustered has highest granularity, flat has lowest granularity.",
 )
 @click.option(
     "--save-intermediate-to-csv",
@@ -190,7 +162,15 @@ def after(**kwargs: Any) -> tuple[CollectStatus, str, dict[str, Any]]:
     is_flag=True,
     type=bool,
     default=False,
-    help="Saves the intermediate results into some file",
+    help="Saves the intermediate results into some file.",
+)
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    type=bool,
+    default=False,
+    help="Shows all functions `gotrace` will monitor. ! might clutter perun output !",
 )
 @click.pass_context
 def gotrace(ctx, **kwargs):

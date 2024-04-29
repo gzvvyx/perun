@@ -32,26 +32,6 @@ class FuncData(ABC):
         ...
 
 
-
-
-class FuncDataDetails(FuncData):
-    __slots__ = "inclusive_time", "exclusive_time", "callees_count", "morestack_time"
-
-    def __init__(self) -> None:
-        self.inclusive_time: list[int] = []
-        self.exclusive_time: list[int] = []
-        self.callees_count: int = 0
-        self.morestack_time: list[int] = []
-
-    def update(self, inclusive_t: int, exclusive_t: int, callees_cnt: int, morestack_t: int) -> None:
-        self.inclusive_time.append(inclusive_t)
-        self.exclusive_time.append(exclusive_t)
-        self.callees_count += callees_cnt
-        self.morestack_time.append(morestack_t)
-
-
-
-
 class FuncDataFlat(FuncData):
     __slots__ = [
         "inclusive_time",
@@ -246,7 +226,7 @@ def parse_traces(raw_data: pathlib.Path, func_map: dict[int, str], data_type: Ty
 
 
 
-def traces_flat_to_pandas(trace_contexts: TraceContextsMap[FuncDataFlat]) -> pd.DataFrame:
+def traces_to_pandas(trace_contexts: TraceContextsMap[FuncDataFlat]) -> pd.DataFrame:
     pandas_rows: list[tuple[Any, ...]] = []
     for func_name, trace, func_times in trace_contexts:
         pandas_rows.append(
@@ -354,96 +334,4 @@ def pandas_to_resources(df: pd.DataFrame) -> list[dict[str, Any]]:
                     "trace": [{"func": f} for f in trace],
                 }
             )
-    return resources
-
-
-
-
-def traces_details_to_pandas(trace_contexts: TraceContextsMap[FuncDataDetails]) -> pd.DataFrame:
-    pandas_rows: list[tuple[Any, ...]] = []
-    for func_name, trace, func_times in trace_contexts:
-        inclusive_t_stats = pd.Series(func_times.inclusive_time).describe(
-            percentiles=[0.10, 0.25, 0.50, 0.75, 0.90]
-        )
-        inclusive_sum = sum(func_times.inclusive_time)
-        exclusive_t_stats = pd.Series(func_times.exclusive_time).describe(
-            percentiles=[0.10, 0.25, 0.50, 0.75, 0.90]
-        )
-        exclusive_sum = sum(func_times.exclusive_time)
-        morestack_sum = sum(func_times.morestack_time)
-        incl_excl_flattened = [
-            val / NS_TO_MS
-            for incl_excl_tuple in zip(inclusive_t_stats.iloc[1:], exclusive_t_stats.iloc[1:])
-            for val in incl_excl_tuple
-        ]
-        pandas_rows.append(
-            (
-                func_name,
-                " -> ".join(trace),
-                int(inclusive_t_stats["count"]),
-                func_times.callees_count,
-                func_times.callees_count / len(func_times.inclusive_time),
-                inclusive_sum / NS_TO_MS,
-                inclusive_sum / trace_contexts.total_runtime,
-                exclusive_sum / NS_TO_MS,
-                exclusive_sum / trace_contexts.total_runtime,
-                morestack_sum / NS_TO_MS,
-                morestack_sum / trace_contexts.total_runtime,
-                *incl_excl_flattened,
-            )
-        )
-    log.cprintln("Parsing DONE. Transforming to Pandas.", colour="green")
-    df = pd.DataFrame(
-        pandas_rows,
-        columns=[
-            "Function",
-            "Trace",
-            "Calls [#]",
-            "Callees [#]",
-            "Callees Mean [#]",
-            "Total Inclusive T [ms]",
-            "Total Inclusive T [%]",
-            "Total Exclusive T [ms]",
-            "Total Exclusive T [%]",
-            "Total Morestack T [ms]",
-            "Total Morestack T [%]",
-            "I Mean",
-            "E Mean",
-            "I Std",
-            "E Std",
-            "I Min",
-            "E Min",
-            "I 10%",
-            "E 10%",
-            "I 25%",
-            "E 25%",
-            "I 50%",
-            "E 50%",
-            "I 75%",
-            "E 75%",
-            "I 90%",
-            "E 90%",
-            "I Max",
-            "E Max",
-        ],
-    )
-    df.sort_values(by=["Total Exclusive T [%]"], inplace=True, ascending=False)
-    return df
-
-
-
-
-def trace_details_to_resources(
-    trace_contexts: TraceContextsMap[FuncDataDetails],
-) -> list[dict[str, Any]]:
-    """Converts the traces into a list of resources saveable to Perun
-
-    :param trace_contexts: structure that holds trace context
-    :return: list of dictionaries, with key and values as needed by perun
-    """
-    resources = []
-    for func_name, trace, func_times in trace_contexts:
-        append_resources(func_name, trace, resources, func_times.inclusive_time, "inclusive")
-        append_resources(func_name, trace, resources, func_times.exclusive_time, "exclusive")
-        append_resources(func_name, trace, resources, func_times.morestack_time, "morestack")
     return resources
