@@ -10,7 +10,6 @@ import time
 import click
 import sys
 import os
-import re
 
 # Perun Imports
 from perun.collect.gotrace import symbols, bpfgen, interpret
@@ -22,6 +21,7 @@ from perun.utils.structs import CollectStatus
 
 
 BUSY_WAIT: int = 5
+BUSY_WAIT_SHORT: int = 2
 
 
 def before(**kwargs: Any) -> tuple[CollectStatus, str, dict[str, Any]]:
@@ -119,7 +119,7 @@ def collect(**kwargs: Any) -> tuple[CollectStatus.OK, str, dict[str, Any]]:
         if not processes.is_process_running("gotrace"):
             log.newline()
             break
-        time.sleep(BUSY_WAIT)
+        time.sleep(BUSY_WAIT_SHORT)
 
     log.minor_success(f"collecting data for {str(kwargs['executable'])}")
 
