@@ -131,7 +131,7 @@ def collect(**kwargs: Any) -> tuple[CollectStatus.OK, str, dict[str, Any]]:
             _, cmderr = commands.run_safely_external_command("time " + str(kwargs["executable"]))
             non_profiled_time = interpret.get_elapsed_time(cmderr)
 
-            log.minor_success(f"real time of {str(kwargs['executable'])} alonein in [s]", non_profiled_time)
+            log.minor_success(f"real time of {str(kwargs['executable'])} alone in [s]", non_profiled_time)
             overhead = ((profiled_time - non_profiled_time) / non_profiled_time) * 100
             log.minor_info(f"overhead {'{:.2f}'.format(overhead)}%")
 
