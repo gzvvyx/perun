@@ -10,6 +10,7 @@ import time
 import click
 import sys
 import os
+import re
 
 # Perun Imports
 from perun.collect.gotrace import symbols, bpfgen, interpret
@@ -79,13 +80,24 @@ def collect(**kwargs: Any) -> tuple[CollectStatus.OK, str, dict[str, Any]]:
     log.minor_success(f"{log.highlight('gotrace')}", "running")
 
     failed_reason = ""
+    profiled_time = ""
     if kwargs["executable"]:
         if script_kit.may_contains_script_with_sudo(str(kwargs["executable"])):
             failed_reason = "the command might require sudo"
             log.minor_fail("Running the workload")
         else:
             try:
-                commands.run_safely_external_command(str(kwargs["executable"]))
+                if kwargs["verbose"]:
+                    if kwargs["get_overhead"]:
+                        _, cmderr = commands.run_safely_external_command("time " + str(kwargs["executable"]), quiet=False)
+
+                        profiled_time = interpret.get_elapsed_time(cmderr)
+
+                        log.minor_success(f"real time of {str(kwargs['executable'])} with {log.highlight('gotrace')} in [s]", profiled_time)
+                    else:
+                        commands.run_safely_external_command(str(kwargs["executable"]), quiet=False)
+                else:
+                    commands.run_safely_external_command(str(kwargs["executable"]))
                 log.minor_success("Running the workload", "finished")
             except (subprocess.CalledProcessError, FileNotFoundError) as exc:
                 failed_reason = f"the called process failed: {exc}"
@@ -111,6 +123,18 @@ def collect(**kwargs: Any) -> tuple[CollectStatus.OK, str, dict[str, Any]]:
 
     log.minor_success(f"collecting data for {str(kwargs['executable'])}")
 
+    non_profiled_time = ''
+    if kwargs["verbose"]:
+        if kwargs["get_overhead"]:
+            log.minor_info(f"running {str(kwargs['executable'])} second time, without {log.highlight('gotrace')}")
+
+            _, cmderr = commands.run_safely_external_command("time " + str(kwargs["executable"]))
+            non_profiled_time = interpret.get_elapsed_time(cmderr)
+
+            log.minor_success(f"real time of {str(kwargs['executable'])} alonein in [s]", non_profiled_time)
+            overhead = ((profiled_time - non_profiled_time) / non_profiled_time) * 100
+            log.minor_info(f"overhead {'{:.2f}'.format(overhead)}%")
+
     return CollectStatus.OK, "", dict(kwargs)
 
 
@@ -132,7 +156,8 @@ def after(**kwargs: Any) -> tuple[CollectStatus, str, dict[str, Any]]:
         trace_data.to_csv(output_file, index=False)
     resources = interpret.pandas_to_resources(trace_data)
     total_runtime = parsed_traces.total_runtime
-    
+
+    log.minor_info(f"time {total_runtime}ns")
     log.minor_success("generating profile")
 
     if not resources:
@@ -163,6 +188,14 @@ def after(**kwargs: Any) -> tuple[CollectStatus, str, dict[str, Any]]:
     type=bool,
     default=False,
     help="Saves the intermediate results into some file.",
+)
+@click.option(
+    "--get-overhead",
+    "-o",
+    is_flag=True,
+    type=bool,
+    default=False,
+    help="Calculates overhead of `gotrace`. Only usable together with `--verbose`. ! will run the program twice !",
 )
 @click.option(
     "--verbose",

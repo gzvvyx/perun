@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from typing import Any, Generic, TypeVar, Type, Literal
 import itertools
 import os
+import re
 import pathlib
 import struct
 
@@ -302,3 +303,21 @@ def pandas_to_resources(df: pd.DataFrame) -> list[dict[str, Any]]:
                 }
             )
     return resources
+
+
+
+
+def get_elapsed_time(cmderr: bytes) -> float:
+    pattern = r"\d+:\d+\.\d+elapsed"
+    match = re.search(pattern, cmderr.decode('utf-8'))
+    time_str = match.group(0)
+    time = time_str.split("elapsed")[0]
+
+    minutes_str, seconds_str = time.split(":")
+
+    minutes = int(minutes_str)
+    seconds = float(seconds_str)
+
+    time = minutes * 60 + seconds
+
+    return time

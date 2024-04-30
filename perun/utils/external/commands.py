@@ -85,14 +85,17 @@ def run_safely_external_command(
         for p in objects:
             p.terminate()
         raise
+                
 
     # collect the return codes
     if check_results:
         for i in range(cmd_no):
+            if not quiet and (cmdout or cmderr):
+                log.minor_info("captured stdout:")
+                log.cprintln(f"{cmdout.decode('utf-8')}", "blue")
+                log.minor_info("captured sterr:")
+                log.cprintln(f"{cmderr.decode('utf-8')}", "red")
             if objects[i].returncode:
-                if not quiet and (cmdout or cmderr):
-                    log.cprintln(f"captured stdout: {cmdout.decode('utf-8')}", "red")
-                    log.cprintln(f"captured stderr: {cmderr.decode('utf-8')}", "red")
                 raise subprocess.CalledProcessError(objects[i].returncode, unpiped_commands[i])
 
     return cmdout, cmderr
