@@ -25,10 +25,11 @@ def get_symbols(traced_file: Path, packages: List[str]) -> tuple[dict[int, str],
     morestack_noctxt_addr = ""
     morestack_addr = ""
 
+
     # find user declared functions
     sec = e.get_section_by_name('.symtab')
     for sym in sec.iter_symbols():
-        if sym["st_shndx"] == 1 and sym["st_info"].type == "STT_FUNC":
+        if sym["st_info"].type == "STT_FUNC":
             if sym.name.startswith("type:"):
                 continue
             if sym.name == "runtime.morestack_noctxt.abi0":
@@ -37,7 +38,7 @@ def get_symbols(traced_file: Path, packages: List[str]) -> tuple[dict[int, str],
                 morestack_addr = sym["st_value"]
             # find functions to profile in given packages
             for package in packages:
-                if sym.name.startswith(package):
+                if sym.name.startswith(package+"."):
                     functions.append((sym.name, sym["st_value"], sym["st_size"]))
 
     if not functions:
