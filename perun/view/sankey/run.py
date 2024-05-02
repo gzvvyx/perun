@@ -136,7 +136,7 @@ def generate_pairs(data: List[SankeyRecord]) -> Tuple[List[str], List[List[str, 
 
         if record.total_morestack_t != 0.0:
             # add morestack pair
-            morestack_uid = record.uid + "__morestack"
+            morestack_uid = record.uid + "_Mstack"
             if morestack_uid not in labels:
                 labels.append(morestack_uid)
                 label_map[morestack_uid] = len(labels) - 1
