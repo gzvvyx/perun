@@ -7,6 +7,10 @@
     <script type="text/javascript" charset="utf8" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src='https://cdn.plot.ly/plotly-2.30.0.min.js'></script>
     <style>
+        * {
+            padding: 0;
+            margin: 0;
+        }
         html {
             font-family: "Courier New", Courier, monospace;
         }
@@ -17,30 +21,70 @@
             width: 48%;
             margin: 0 1%;
         }
-        .left {
-            float: left;
-        }
-        .right {
-            float: right;
-        }
-        .middle {
+        .graph {
             width: 98%;
             margin: 0 1%;
-            justtify-content: center;
+            display: none;
+            border-color: black;
+            border-style: solid;
+        }
+        .active {
+            display: block;
+        }
+        .button {
+            padding: 10px 20px;
+            background-color: #f5f5f5;
+            border: none;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .button:hover {
+            background-color: #f0f0f0;
+        }
+        .clicked {
+            background-color: #ccc;
         }
     </style>
 </head>
+
 <body>
-    <div class="middle">
-    <h1>{{ main_title }}</h1>
-        <div class="left column">
+    <div>
+        <h1>{{ main_title }} v2</h1>
+        <div>
+            <button id="button_excl" class="button clicked" onclick="toggle_incl()">Exclusive Time</button>
+            <button id="button_incl" class="button" onclick="toggle_excl()">Inclusive Time</button>
+        </div>
+        <div id="excl" class="graph active">
             <h2>{{ title1 }}</h2>
             {{ figure1 }}
         </div>
-        <div class="right column">
+        <div id="incl" class="graph">
             <h2>{{ title2 }}</h2>
             {{ figure2 }}
         </div>
+<!--        <div>
+            <button id="button_zoom_in" class="button" onclick="zoom_in()">+</button>
+            <button id="button_zoom_out" class="button" onclick="zoom_out()">-</button>
+        </div> -->
     </div>
+
+
+    <script>
+        function toggle_excl() {
+            document.getElementById('button_excl').classList.remove('clicked');
+            document.getElementById('button_incl').classList.add('clicked');
+        
+            document.getElementById('excl').classList.remove('active');
+            document.getElementById('incl').classList.add('active');
+        }
+
+        function toggle_incl() {
+            document.getElementById('button_incl').classList.remove('clicked');
+            document.getElementById('button_excl').classList.add('clicked');
+        
+            document.getElementById('incl').classList.remove('active');
+            document.getElementById('excl').classList.add('active');
+        }
+    </script>
 </body>
 </html>

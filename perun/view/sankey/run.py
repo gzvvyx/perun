@@ -183,8 +183,9 @@ def generate_sankey(profile: Profile, **kwargs: Any) -> None:
 
     
     fig_excl = go.Figure(go.Sankey(
+        arrangement = "freeform",
         valueformat = ".000f",
-        valuesuffix = " ms",
+        valuesuffix = " ns",
         node = dict(
             pad = 50,
             thickness = 15,
@@ -200,8 +201,9 @@ def generate_sankey(profile: Profile, **kwargs: Any) -> None:
     ))
 
     fig_incl = go.Figure(go.Sankey(
+        arrangement = "freeform",
         valueformat = ".000f",
-        valuesuffix = " ms",
+        valuesuffix = " ns",
         node = dict(
             pad = 50,
             thickness = 15,
@@ -212,7 +214,7 @@ def generate_sankey(profile: Profile, **kwargs: Any) -> None:
         link = dict(
             source = links_incl["source"],
             target = links_incl["target"],
-            value = links_incl["value"],
+            value = links_incl["value"]
         )
     ))
 
