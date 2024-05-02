@@ -157,7 +157,6 @@ def after(**kwargs: Any) -> tuple[CollectStatus, str, dict[str, Any]]:
     resources = interpret.pandas_to_resources(trace_data)
     total_runtime = parsed_traces.total_runtime
 
-    log.minor_info(f"time {total_runtime}ns")
     log.minor_success("generating profile")
 
     if not resources:
