@@ -140,12 +140,12 @@ def generate_pairs(data: List[SankeyRecord]) -> Tuple[List[str], List[List[str, 
             if morestack_uid not in labels:
                 labels.append(morestack_uid)
                 label_map[morestack_uid] = len(labels) - 1
-            pairs_excl.append([label_map[record.uid], label_map[morestack_uid], record.total_morestack_t, record.trace+"_Mstack"])                
-            pairs_incl.append([label_map[record.uid], label_map[morestack_uid], record.total_morestack_t, record.trace+"_Mstack"])
+            pairs_excl.append([label_map[record.uid], label_map[morestack_uid], record.total_morestack_t])                
+            pairs_incl.append([label_map[record.uid], label_map[morestack_uid], record.total_morestack_t])
 
         # add pairs
-        pairs_excl.append([label_map[record.caller], label_map[record.uid], record.total_excl_t, record.trace_list])
-        pairs_incl.append([label_map[record.caller], label_map[record.uid], record.total_incl_t, record.trace_list])
+        pairs_excl.append([label_map[record.caller], label_map[record.uid], record.total_excl_t])
+        pairs_incl.append([label_map[record.caller], label_map[record.uid], record.total_incl_t])
 
     return labels, pairs_excl, pairs_incl
 
@@ -154,15 +154,13 @@ def pairs_to_links(pairs: List[List[int, int, float, List[str]]]) -> dict:
     links = {
         "source": [],
         "target": [],
-        "value": [],
-        "trace": []
+        "value": []
     }
     
     for pair in pairs:
         links["source"].append(pair[0])
         links["target"].append(pair[1])
         links["value"].append(pair[2])
-        links["trace"].append(pair[3])
 
     return links
 
