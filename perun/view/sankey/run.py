@@ -123,7 +123,7 @@ def generate_pairs(data: List[SankeyRecord]) -> Tuple[List[str], List[List[str, 
         if record.caller == '':
             split_record = record.uid.split('.')
             if len(split_record) == 3:
-                # is goroutine, create caller
+                # is goroutine, deferwrap or type, create caller
                 record.caller = split_record[0] + '.' + split_record[1]
             # maybe create unknown caller
             if record.uid.endswith(".main"):
@@ -140,29 +140,39 @@ def generate_pairs(data: List[SankeyRecord]) -> Tuple[List[str], List[List[str, 
             if morestack_uid not in labels:
                 labels.append(morestack_uid)
                 label_map[morestack_uid] = len(labels) - 1
-            pairs_excl.append([label_map[record.uid], label_map[morestack_uid], record.total_morestack_t])                
-            pairs_incl.append([label_map[record.uid], label_map[morestack_uid], record.total_morestack_t])
+            pairs_excl.append([label_map[record.uid], label_map[morestack_uid], record.total_morestack_t, record.trace+"_Mstack"])                
+            pairs_incl.append([label_map[record.uid], label_map[morestack_uid], record.total_morestack_t, record.trace+"_Mstack"])
 
         # add pairs
-        pairs_excl.append([label_map[record.caller], label_map[record.uid], record.total_excl_t])
-        pairs_incl.append([label_map[record.caller], label_map[record.uid], record.total_incl_t])
+        pairs_excl.append([label_map[record.caller], label_map[record.uid], record.total_excl_t, record.trace_list])
+        pairs_incl.append([label_map[record.caller], label_map[record.uid], record.total_incl_t, record.trace_list])
 
     return labels, pairs_excl, pairs_incl
 
 
-def pairs_to_links(pairs: List[List[int, int, float]]) -> dict:
+def pairs_to_links(pairs: List[List[int, int, float, List[str]]]) -> dict:
     links = {
         "source": [],
         "target": [],
-        "value": []
+        "value": [],
+        "trace": []
     }
     
     for pair in pairs:
         links["source"].append(pair[0])
         links["target"].append(pair[1])
         links["value"].append(pair[2])
+        links["trace"].append(pair[3])
 
     return links
+
+def get_func_names(labels: List[str]) -> List[str]:
+    shortened = []
+    for label in labels:
+        split = label.split(".")
+        shortened.append(split[-1])
+
+    return shortened
     
 
 def generate_sankey(profile: Profile, **kwargs: Any) -> None:
@@ -174,6 +184,8 @@ def generate_sankey(profile: Profile, **kwargs: Any) -> None:
     
     labels, pairs_excl, pairs_incl = generate_pairs(data)
 
+    shortened_labels = get_func_names(labels)
+
     links_excl = pairs_to_links(pairs_excl)
     links_incl = pairs_to_links(pairs_incl)
 
@@ -182,6 +194,18 @@ def generate_sankey(profile: Profile, **kwargs: Any) -> None:
     node_colors = [node_colors_mappings[node] for node in labels]
 
     
+    hovertemplate_excl="<b>Name:</b> %{label}<br>" \
+              "<b>Exclusive time:</b> %{value}<br>" \
+              "<b>Full name:</b> %{customdata}<br>" \
+              "<b>Incoming:</b> %{targetLinks.length}<br>" \
+              "<b>Outgoing:</b> %{sourceLinks.length}<br>" \
+              
+    hovertemplate_incl="<b>Name:</b> %{label}<br>" \
+              "<b>Inclusive time:</b> %{value}<br>" \
+              "<b>Full name:</b> %{customdata}<br>" \
+              "<b>Incoming:</b> %{targetLinks.length}<br>" \
+              "<b>Outgoing:</b> %{sourceLinks.length}<br>" \
+
     fig_excl = go.Figure(go.Sankey(
         arrangement = "freeform",
         valueformat = ".000f",
@@ -190,8 +214,10 @@ def generate_sankey(profile: Profile, **kwargs: Any) -> None:
             pad = 50,
             thickness = 15,
             line = dict(color = "black", width = 0.5),
-            label = labels,
-            color = node_colors
+            label = shortened_labels,
+            color = node_colors,
+            hovertemplate = hovertemplate_excl,
+            customdata = labels
         ),
         link = dict(
             source = links_excl["source"],
@@ -208,8 +234,10 @@ def generate_sankey(profile: Profile, **kwargs: Any) -> None:
             pad = 50,
             thickness = 15,
             line = dict(color = "black", width = 0.5),
-            label = labels,
-            color = node_colors
+            label = shortened_labels,
+            color = node_colors,
+            hovertemplate = hovertemplate_incl,
+            customdata = labels
         ),
         link = dict(
             source = links_incl["source"],
@@ -218,7 +246,6 @@ def generate_sankey(profile: Profile, **kwargs: Any) -> None:
         )
     ))
 
-    # TODO: add this to view_kit.save_view_graph
     output_file = kwargs["output_file"]
     if output_file is None:
         prof_name = os.path.splitext(helpers.generate_profile_name(profile))[0]

@@ -25,8 +25,6 @@
             width: 98%;
             margin: 0 1%;
             display: none;
-            border-color: black;
-            border-style: solid;
         }
         .active {
             display: block;
@@ -73,9 +71,10 @@
         function toggle_excl() {
             document.getElementById('button_excl').classList.remove('clicked');
             document.getElementById('button_incl').classList.add('clicked');
-        
+
             document.getElementById('excl').classList.remove('active');
             document.getElementById('incl').classList.add('active');
+            window.dispatchEvent(new Event("resize"))
         }
 
         function toggle_incl() {
@@ -84,6 +83,7 @@
         
             document.getElementById('incl').classList.remove('active');
             document.getElementById('excl').classList.add('active');
+            window.dispatchEvent(new Event("resize"))
         }
     </script>
 </body>
