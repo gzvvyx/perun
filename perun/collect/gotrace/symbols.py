@@ -38,7 +38,9 @@ def get_symbols(traced_file: Path, packages: List[str]) -> tuple[dict[int, str],
                 morestack_addr = sym["st_value"]
             # find functions to profile in given packages
             for package in packages:
-                if sym.name.startswith(package+"."):
+                if sym.name.startswith(package):
+                    if "[" in sym.name or "{" in sym.name:
+                        continue
                     functions.append((sym.name, sym["st_value"], sym["st_size"]))
 
     if not functions:
@@ -55,7 +57,7 @@ def get_symbols(traced_file: Path, packages: List[str]) -> tuple[dict[int, str],
         sec_addr = sec['sh_addr']
 
         if func[1] < sec_addr or func[1] + func[2] > sec_addr + sec_size:
-            raise ValueError('Symbol not in section')
+            log.error(f"Symbol {func[1]} not in section, Should not happen")
         
         f.seek(sec_offset + func[1] - sec_addr)
 
