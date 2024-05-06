@@ -69,7 +69,7 @@ dependencies = [
     "kiwisolver!=1.4.5", # matplotlib dep, 1.4.5 does not work when lazy-importing matplotlib
 
     # gotrace
-    "elftools>=0.30",
+    "pyelftools>=0.30",
     "distorm3>=3.5.2",
 ]
 dynamic = ["version"]
