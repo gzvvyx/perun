@@ -71,6 +71,7 @@ dependencies = [
     # gotrace
     "pyelftools>=0.30",
     "distorm3>=3.5.2",
+    "plotly>=5.20.0",
 ]
 dynamic = ["version"]
 
