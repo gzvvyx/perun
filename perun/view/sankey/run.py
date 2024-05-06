@@ -8,10 +8,8 @@ from typing import Any
 # Third-Party Imports
 import click
 import os
-import pandas as pd
 import numpy as np
 import jinja2
-import matplotlib.colors as mcolors
 
 import plotly.graph_objects as go
 import plotly.express as pex
@@ -19,7 +17,6 @@ import plotly.express as pex
 # Perun Imports
 from perun.profile import helpers
 from perun.utils import log
-from perun.utils.common import cli_kit, common_kit, view_kit
 from perun.profile.factory import Profile
 from perun.profile import convert
 
